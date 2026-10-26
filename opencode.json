@@ -10,9 +10,12 @@
       "models": {
         "qwen2.5:14b": {
           "name": "qwen2.5:14b"
+        },
+        "qwen2.5:7b": {
+          "name": "qwen2.5:7b"
         }
       }
     }
   },
-  "model": "ollama:qwen2.5:14b"
+  "model": "ollama:qwen2.5:7b"
 }
