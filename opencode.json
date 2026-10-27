@@ -17,5 +17,8 @@
       }
     }
   },
-  "model": "ollama:qwen2.5:7b"
+  "model": "ollama:qwen2.5:7b",
+  "providerTimeout": 3600000,
+  "chunkTimeout": 0
+
 }
