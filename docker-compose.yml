@@ -1,0 +1,26 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: landmarket-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-landmarket}
+      POSTGRES_USER: ${POSTGRES_USER:-landmarket}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-landmarket_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./backend/db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-landmarket} -d ${POSTGRES_DB:-landmarket}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  postgis_data:

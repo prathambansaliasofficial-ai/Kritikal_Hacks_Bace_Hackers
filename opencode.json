@@ -1,24 +1,15 @@
 {
-  "$schema": "https://opencode.ai",
+  "$schema": "https://opencode.ai/config.json",
   "provider": {
-    "ollama": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Ollama",
-      "options": {
-        "baseURL": "http://localhost:11434/v1"
-      },
+    "google": {
+      "npm": "@ai-sdk/google",
+      "name": "Google Gemini",
       "models": {
-        "qwen2.5:14b": {
-          "name": "qwen2.5:14b"
-        },
-        "qwen2.5:7b": {
-          "name": "qwen2.5:7b"
+        "gemini-3.8-flash": {
+          "name": "Gemini 3.8 Flash"
         }
       }
     }
   },
-  "model": "ollama:qwen2.5:7b",
-  "providerTimeout": 3600000,
-  "chunkTimeout": 0
-
+  "model": "google:gemini-3.8-flash"
 }

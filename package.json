@@ -1,0 +1,15 @@
+{
+  "name": "land-market",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Land Market monorepo: React frontend, FastAPI backend, TinyFish + blockchain middleware",
+  "scripts": {
+    "install:all": "npm --prefix frontend install && npm --prefix middleware install",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:middleware": "npm --prefix middleware run dev",
+    "typecheck": "npm --prefix frontend run typecheck && npm --prefix middleware run typecheck",
+    "test:middleware": "npm --prefix middleware run test",
+    "sync:docs": "node scripts/sync-docs.mjs",
+    "check:docs": "node scripts/check-docs.mjs"
+  }
+}
