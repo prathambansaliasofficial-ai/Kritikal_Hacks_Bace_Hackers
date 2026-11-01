@@ -2,6 +2,13 @@
   GENERATED FILE. Source: whole_plan.md
   Do not edit this copy. Edit the root file, then run: npm run sync:docs
 -->
+RED BRANCH: FRONTEND 
+YELLOW BRANCH: MIDDLEWARE 
+BLUE BRANCH: BACKEND 
+EVERYONE WORK ON THEIR SPECIFIC BRANCH ONLY
+
+
+
 # Land Market — Master Roadmap (Zero → One)
 
 Last updated: **2026-10-29 23:30 IST**
@@ -159,6 +166,20 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Kya karta hai:** Har AI ko pata rahega kya done hai, kya pending, next commit message kya hai.
 **Files:** `frontend/log-f.md`, `backend/log-b.md`, `middleware/log-m.md`, `whole_plan.md`.
 
+## C0 — Baseline commit — [1/1]
+
+### [.] C0 — Jo bana hua hai use git me lock karo
+
+**Done:** 2026-11-02 12:00 IST — Session C0
+
+**Kya hua:** Baseline commit `729e9eb` — `C0 FIRST WORTHY COMMIT- LOCKING ALREADY BUILT` — already pushed to `main`. All scaffold files locked: `.gitignore`, `.editorconfig`, `.nvmrc`, `.env.example`, `docker-compose.yml`, `package.json`, `README.md`, `SETUP.md`, `AGENTS.md`, `whole_plan.md`, `docs/`, `scripts/`, `frontend/`, `backend/`, `middleware/`. Junk file `test.txt` deletion staged. No `.env` or secrets committed.
+
+**Kya karta hai:** Monorepo scaffold ab `main` par hai; interns ab `main` se apne branches bana sakte hain (`backend/<name>`, `middleware/<name>`, `frontend/<name>`, `ai/<name>`).
+
+**Files:** `.gitignore`, `.editorconfig`, `.nvmrc`, `.env.example`, `docker-compose.yml`, `package.json`, `README.md`, `SETUP.md`, `AGENTS.md`, `whole_plan.md`, `docs/`, `scripts/`, `frontend/`, `backend/`, `middleware/`.
+
+**Verify:** `git log --oneline -1` shows `729e9eb`; `git status --short` is clean.
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -171,31 +192,11 @@ na ho; pass par seller ko, fail par buyer ko wapas.
   Key git history me kabhi commit nahi hui.
 - [.] 22:11 — Frontend typecheck/build, backend ruff/pytest, middleware typecheck/test,
   `docker compose config`, aur JSON validation pass.
-- [] Commit/push — C0 me hoga.
+- [.] Commit/push — C0 me hoga.
 
 ---
 
 # ABHI YEH YEH KARNA HAI
-
-## C0 — Baseline commit — [0/1]
-
-### [] C0 — Jo bana hua hai use git me lock karo
-
-**Owner:** Lead only. Interns wait for this commit, then branch from `main`.
-
-**Kya karna hai**
-1. `git status --short` dekho. Sirf project files stage karo. Junk/empty files
-   (`react.txt`, `test.js`, `README of this project.md`) delete ho chuki hain; unhe wapas mat lao.
-2. Kam se kam ye stage karo: `.gitignore`, `.editorconfig`, `.nvmrc`, `.env.example`,
-   `docker-compose.yml`, `package.json`, `README.md`, `SETUP.md`, `AGENTS.md`, `whole_plan.md`,
-   `docs/`, `scripts/`, `frontend/`, `backend/`, `middleware/`.
-3. Purani junk file `test.txt` ki deletion bhi stage karo: `git add -u test.txt`.
-4. Commit message: `chore: scaffold land market monorepo and roadmap`
-5. Push **only after the human approves**: `git push origin main`.
-6. Logs me commit hash + date + time + session note karo.
-
-**Done criteria:** `main` par baseline commit hai; `.env` files stage nahi hui.
-**Verify:** `git log --oneline -1 && git status --short`.
 
 ## Phase 1 — Data foundation — [0/3]
 

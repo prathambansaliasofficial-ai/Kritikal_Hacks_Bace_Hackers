@@ -156,3 +156,11 @@ Never commit `.env` files or real keys. The only local private key allowed is Ha
 - Failed middleware/chain call => 502/503 and no state change.
 - Ambiguous evidence => `NEEDS_REVIEW`, never forced `APPROVED`.
 - Any blocking check failure => `REJECTED` and refund path.
+
+## 9. Future infrastructure (post-hackathon)
+
+These are planned but NOT implemented for the 4 Nov hackathon demo:
+
+- **Database**: Currently PostGIS (Docker). Planned migration to Supabase (PostgreSQL + PostGIS) after hackathon. `DATABASE_URL` will point to Supabase instance.
+- **Deployment**: Currently local development (localhost:8000 backend, localhost:8090 middleware, localhost:5173 frontend). Planned deployment to Vercel (frontend) after hackathon. `VITE_API_BASE_URL` will point to production backend.
+- TinyFish permanent API key (`TINYFISH_API_KEY`) is used for live evidence runs during the demo.
