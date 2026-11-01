@@ -78,8 +78,8 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
-- [] **C0 baseline commit** — backend scaffold abhi local/untracked hai; commit pending.
-- [] Backend ka koi pushed commit nahi.
+- [.] **C0 baseline commit** — `729e9eb` — `C0 FIRST WORTHY COMMIT- LOCKING ALREADY BUILT` — pushed to `main` on 2026-11-02.
+- [.] Backend ka pushed commit hai; branch `backend/<name>` se `main` se nikaal sakte hain.
 
 ---
 
