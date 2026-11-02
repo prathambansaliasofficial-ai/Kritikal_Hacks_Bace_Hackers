@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { MapView } from "./components/MapView";
+import { EvidencePanel } from "./components/EvidencePanel";
+import { ReviewQueue } from "./components/ReviewQueue";
 import {
   API_BASE_URL,
   fetchHealth,
   requestVerification,
   type HealthResponse,
 } from "./lib/api";
+import { isChainConfigured, chainWarning } from "./lib/chain";
 
 type HealthState =
   | { phase: "loading" }
@@ -15,8 +18,10 @@ type HealthState =
 type VerifyState =
   | { phase: "idle" }
   | { phase: "loading" }
-  | { phase: "done"; text: string }
+  | { phase: "done"; sheetId: number }
   | { phase: "error"; message: string };
+
+const OFFICER_TOKEN = import.meta.env.VITE_OFFICER_TOKEN ?? "";
 
 export default function App() {
   const [health, setHealth] = useState<HealthState>({ phase: "loading" });
@@ -48,11 +53,8 @@ export default function App() {
 
     setVerify({ phase: "loading" });
     try {
-      const result = await requestVerification(value);
-      setVerify({
-        phase: "done",
-        text: JSON.stringify(result, null, 2),
-      });
+      const sheet = await requestVerification(value);
+      setVerify({ phase: "done", sheetId: sheet.id });
     } catch (error) {
       setVerify({
         phase: "error",
@@ -66,6 +68,11 @@ export default function App() {
 
   return (
     <div className="shell">
+      {!isChainConfigured && (
+        <div className="warn-banner" role="status" aria-live="polite">
+          {chainWarning}
+        </div>
+      )}
       <header className="topbar">
         <div>
           <p className="eyebrow">Kritical Hacks 2026 · Prototype</p>
@@ -119,13 +126,33 @@ export default function App() {
             {verify.phase === "error" && (
               <p className="error">{verify.message}</p>
             )}
-            {verify.phase === "done" && <pre>{verify.text}</pre>}
+            {verify.phase === "done" && (
+              <div className="evidence-loaded">
+                <p className="muted">
+                  Evidence sheet #{verify.sheetId} loaded. Review it below.
+                </p>
+              </div>
+            )}
           </div>
+
+          {verify.phase === "done" && (
+            <EvidencePanel ulpin={ulpin} />
+          )}
 
           <footer className="footnote">
             Backend: <code>{API_BASE_URL}</code>
           </footer>
         </aside>
+
+        {OFFICER_TOKEN && (
+          <section className="panel review-panel-wrapper">
+            <div className="panel-heading">
+              <h2>Review Queue</h2>
+              <span className="muted">Officer review</span>
+            </div>
+            <ReviewQueue officer={OFFICER_TOKEN} />
+          </section>
+        )}
       </main>
     </div>
   );

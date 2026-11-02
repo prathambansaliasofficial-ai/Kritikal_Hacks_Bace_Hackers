@@ -1,0 +1,5 @@
+- Sirf apne module folder mein kaam karo — doosre module ka code mat chhedo
+- main par kabhi direct push mat karo — apni branch par push karo, PR kholo, lead merge karega
+- Task ID order mein kaam karo, skip mat karo
+- npm run sync:docs && npm run check:docs har batch ke baad chalao
+- Koi fake API key, fake TxHash, ya government record mat dalo
