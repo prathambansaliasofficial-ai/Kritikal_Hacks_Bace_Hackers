@@ -539,3 +539,18 @@ h2 {
   color: var(--danger);
 }
 
+.wallet-btn {
+  margin-left: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.wallet-btn:hover {
+  border-color: var(--accent);
+}
+

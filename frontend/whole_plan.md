@@ -194,7 +194,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
 
-## Phase 7 — Frontend real flows — [2/6]
+## Phase 7 — Frontend real flows — [3/6]
 
 ### [.] T7.1 — Map par parcel aur ALU layers
 
@@ -219,6 +219,18 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Files:** `frontend/src/components/EvidencePanel.tsx`, `frontend/src/components/ReviewQueue.tsx`, `frontend/src/lib/api.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
 
 **Verify:** typecheck aur build pass.
+
+### [.] T7.3 — Citizen wallet connect + chain switch
+
+**Done:** 2026-11-02 17:30 IST — Session 1
+
+**Kya hua:** `frontend/src/lib/wallet.ts` banaya - `connectWallet()`, `switchToConfiguredChain()`, `onAccountsChanged()`. `window.ethereum` connect, chain switch/add (local 31337), account change listener. No wallet par clear message. Shortened address + disconnect/reset UI. `WalletPill` component in `App.tsx` me integrate kiya.
+
+**Kya karta hai:** Wallet connect/disconnect aur chain switch kaam karta hai.
+
+**Files:** `frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
 
 ## Repo hygiene — 2026-10-29 22:11 IST
 
@@ -611,24 +623,6 @@ fake run mat karo.
 ## Phase 7 — Frontend real flows — [1/6]
 
 **Owner:** Frontend. Context packs: `docs/context/C7A.md` (T7.1–T7.3), `docs/context/C7B.md` (T7.4–T7.6).
-
-### [] T7.3 — Citizen wallet connect + chain switch
-
-**Owner:** Frontend. Context pack: `docs/context/C7A.md`.
-
-**Kya karna hai**
-1. `frontend/src/lib/wallet.ts`: `window.ethereum` connect, chain switch/add (local 31337),
-   account change listener; wallet na ho to clear message.
-2. Shortened address + disconnect/reset UI.
-3. No buy transaction yet; buy is `T7.4`.
-
-**Files:** `frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Wallet connect/disconnect aur chain switch kaam karta hai.
-**Verify:** manual in browser + build.
-
-### Commit batch C7A — T7.1, T7.2, T7.3
-
-**Message:** `feat(web): add map layers, evidence review and wallet connect`
 
 ### [] T7.4 — Listing browse + buy flow
 

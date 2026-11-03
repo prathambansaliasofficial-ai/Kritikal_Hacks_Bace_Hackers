@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { MapView } from "./components/MapView";
 import { EvidencePanel } from "./components/EvidencePanel";
 import { ReviewQueue } from "./components/ReviewQueue";
@@ -8,7 +8,14 @@ import {
   requestVerification,
   type HealthResponse,
 } from "./lib/api";
-import { isChainConfigured, chainWarning } from "./lib/chain";
+import { isChainConfigured, chainWarning, chainConfig } from "./lib/chain";
+import {
+  connectWallet,
+  switchToConfiguredChain,
+  onAccountsChanged,
+  shortenAddress,
+  type WalletState,
+} from "./lib/wallet";
 
 type HealthState =
   | { phase: "loading" }
@@ -27,6 +34,8 @@ export default function App() {
   const [health, setHealth] = useState<HealthState>({ phase: "loading" });
   const [ulpin, setUlpin] = useState("");
   const [verify, setVerify] = useState<VerifyState>({ phase: "idle" });
+  const [wallet, setWallet] = useState<WalletState>({ phase: "no-wallet" });
+  const accountListenerRef = useRef<(() => void) | null>(null);
 
   const loadHealth = useCallback(async () => {
     setHealth({ phase: "loading" });
@@ -42,7 +51,36 @@ export default function App() {
 
   useEffect(() => {
     void loadHealth();
-  }, [loadHealth]);
+
+    accountListenerRef.current = onAccountsChanged((account) => {
+      if (account) {
+        setWallet({ phase: "connected", account, chainId: chainConfig.chainId });
+      } else {
+        setWallet({ phase: "no-wallet" });
+      }
+    });
+
+    return () => {
+      accountListenerRef.current?.();
+    };
+  }, []);
+
+  const disconnectWallet = useCallback(() => {
+    setWallet({ phase: "no-wallet" });
+  }, []);
+
+  async function handleConnectWallet() {
+    try {
+      setWallet({ phase: "connecting" });
+      const account = await connectWallet();
+      setWallet({ phase: "connected", account, chainId: chainConfig.chainId });
+    } catch (err) {
+      setWallet({
+        phase: "error",
+        message: err instanceof Error ? err.message : "Wallet connect failed",
+      });
+    }
+  }
 
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,6 +119,7 @@ export default function App() {
         <div className="status-row">
           <StatusPill label="API" value={health.phase} />
           <StatusPill label="PostGIS" value={dbStatus} />
+          <WalletPill wallet={wallet} onConnect={handleConnectWallet} onDisconnect={disconnectWallet} />
         </div>
       </header>
 
@@ -166,4 +205,65 @@ function StatusPill({ label, value }: { label: string; value: string }) {
       {label}: {value}
     </span>
   );
+}
+
+function WalletPill({
+  wallet,
+  onConnect,
+  onDisconnect,
+}: {
+  wallet: WalletState;
+  onConnect: () => void;
+  onDisconnect: () => void;
+}) {
+  if (wallet.phase === "no-wallet") {
+    return (
+      <span className="pill bad" role="status" aria-live="polite">
+        <span className="dot" /> Wallet: not connected{" "}
+        <button className="wallet-btn" onClick={onConnect}>
+          Connect
+        </button>
+      </span>
+    );
+  }
+
+  if (wallet.phase === "connecting") {
+    return (
+      <span className="pill wait" role="status" aria-live="polite">
+        <span className="dot" /> Wallet: connecting…
+      </span>
+    );
+  }
+
+  if (wallet.phase === "error") {
+    return (
+      <span className="pill bad" role="status" aria-live="polite">
+        <span className="dot" /> Wallet error: {wallet.message}{" "}
+        <button className="wallet-btn" onClick={onConnect}>
+          Retry
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="pill good" role="status" aria-live="polite">
+      <span className="dot" />
+      Wallet: {shortenAddress(wallet.account)} (chain {wallet.chainId}){" "}
+      <button className="wallet-btn" onClick={switchChain}>
+        Switch chain
+      </button>{" "}
+      <button className="wallet-btn" onClick={onDisconnect}>
+        Disconnect
+      </button>
+    </span>
+  );
+
+  async function switchChain() {
+    try {
+      await switchToConfiguredChain();
+    } catch {
+      // Switched handled by error state in caller via accountsChanged
+    }
+  }
 }

@@ -107,6 +107,17 @@ Branch: `frontend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 15:45 — `npm --prefix frontend run build` pass.
 - [.] `../whole_plan.md` T7.2 marker `[]` → `[.]` kiya; block `YEH SAB HO GYA` me move kiya.
 
+## Session 10 — 2026-11-02 17:30 IST (T7.3)
+
+- [.] 17:30 — `src/lib/wallet.ts` banaya: `connectWallet()`, `switchToConfiguredChain()`, `onAccountsChanged()`.
+- [.] 17:30 — `window.ethereum` connect, local chain 31337 add/switch, account change listener.
+- [.] 17:30 — No wallet par clear message; shortened address + disconnect/reset UI.
+- [.] 17:30 — `WalletPill` component in `App.tsx` me integrate kiya.
+- [.] 17:30 — `index.css` me `.wallet-btn` style add kiya.
+- [.] 17:30 — `npm --prefix frontend run typecheck` pass.
+- [.] 17:30 — `npm --prefix frontend run build` pass.
+- [.] `../whole_plan.md` T7.3 marker `[]` → `[.]` kiya; block `YEH SAB HO GYA` me move kiya.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -153,11 +164,11 @@ Branch: `frontend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - **Done criteria:** Officer demo flow UI se chalta hai.
 - **Verify:** typecheck aur build dono pass.
 
-### [] T7.3 — Citizen wallet connect + chain switch
+### [.] T7.3 — Citizen wallet connect + chain switch
 
-- [] `src/lib/wallet.ts`: wallet connect, local chain add/switch, account change listener.
-- [] Shortened address + disconnect/reset.
-- [] Buy flow T7.4 me aayega; yahan transaction nahi.
+- [.] 17:30 — `src/lib/wallet.ts` banaya: wallet connect, local chain add/switch, account change listener.
+- [.] 17:30 — Shortened address + disconnect/reset.
+- [.] 17:30 — Buy flow T7.4 me aayega; yahan transaction nahi.
 - **Done criteria:** Wallet connect/disconnect aur chain switch kaam karta hai.
 
 ### [] T7.4 — Listing browse + buy flow
@@ -199,8 +210,6 @@ Branch: `frontend/<name>` only. Owner map: `../docs/task-ownership.md`.
 
 ## Agla batch
 
-**Abhi frontend ka kaam nahi hai.** Backend `B1` (`T1.1`–`T1.3`) aur `B2`
-(`T2.1`–`T2.3`) pehle chahiye. Frontend ka pehla pending task **T7.1** hai (map layers),
-jo `T6.1-F` ke baad aata hai. Tab tak apni branch `main` se sync rakho.
+**Batch C7A (T6.1-F, T7.1, T7.2, T7.3) complete.** Frontend ka agla pending task **T7.4** hai (listing browse + buy flow), batch C7B ka hissa. Backend `B1` (`T1.1`–`T1.3`) aur `B2` (`T2.1`–`T2.3`) pehle chahiye. Tab tak apni branch `main` se sync rakho.
 
 **C0 commit message:** `chore: scaffold land market monorepo and roadmap`
