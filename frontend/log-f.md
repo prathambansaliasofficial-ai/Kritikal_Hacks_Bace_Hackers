@@ -201,26 +201,41 @@ Branch: `frontend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 17:22 — Accessible labels, focus states, responsive 375/1280.
 - **Done criteria:** No horizontal scroll; banner visible.
 
+## Session 12 — 2026-11-05 20:38 IST (T8.3-F + T9.3-F)
+
+- [.] 20:38 — `npm --prefix frontend run typecheck`, `build`, `audit --omit=dev` sab pass (0 vulnerabilities).
+- [.] 20:38 — Accessibility: `focus-visible` outline, disabled buttons, `aria-live` status, accessible labels.
+- [.] 20:38 — Chunk warning documented in `README.md`.
+- [.] 20:38 — `README.md` final frontend commands update kiya.
+- [.] 20:38 — `frontend/Dockerfile` banaya (node:24-alpine builder + nginx:alpine serve, port 80).
+- [.] 20:38 — `npm --prefix frontend run build` pass.
+
 ## Phase 8 — Hardening
 
-### [] T8.3-F — Frontend quality gate (frontend part)
+### [.] T8.3-F — Frontend quality gate (frontend part)
 
-- [] `npm run typecheck`, `npm run build`, `npm audit --omit=dev`.
-- [] Bundle chunk warning fix ya document karo (code-splitting).
-- [] Accessibility basics: labels, focus states, button disabled states.
-- [] README me final frontend commands.
+- [.] 20:38 — `npm --prefix frontend run typecheck` pass.
+- [.] 20:38 — `npm --prefix frontend run build` pass.
+- [.] 20:38 — `npm --prefix frontend run audit --omit=dev` pass (0 vulnerabilities).
+- [.] 20:38 — Accessibility basics: `focus-visible` outline on interactive elements, disabled buttons while pending, `aria-live` status regions, accessible labels.
+- [.] 20:38 — Bundle chunk warning documented in `README.md` (single-page demo shell; code-split or raise `build.chunkSizeWarningLimit` to resolve).
+- [.] 20:38 — `README.md` updated with final frontend commands (dev, typecheck, build, preview, audit).
+- **Done criteria:** typecheck, build, audit all pass; accessibility basics covered; chunk warning documented.
+- **Verify:** `npm --prefix frontend run build`.
 
 ## Phase 9 — Stretch (optional)
 
-### [] T9.3-F — Frontend production container
+### [.] T9.3-F — Frontend production container
 
-- [] `frontend/Dockerfile` (static build + serve).
-- [] Public demo URL ke liye env/API base check.
+- [.] 20:38 — `frontend/Dockerfile` banaya (static build + serve): node:24-alpine builder (`npm ci` + `npm run build`), nginx:alpine serve stage, port 80.
+- [.] 20:38 — Public demo env/API base check noted in `README.md` (`VITE_API_BASE_URL`, `VITE_ESCROW_ADDRESS`, etc.).
+- **Done criteria:** `frontend/Dockerfile` present for static build + serve.
+- **Verify:** Dockerfile present; build uses documented commands.
 
 ---
 
 ## Agla batch
 
-**Batch C7A (T6.1-F, T7.1, T7.2, T7.3) complete.** Frontend ka agla pending task **T7.4** hai (listing browse + buy flow), batch C7B ka hissa. Backend `B1` (`T1.1`–`T1.3`) aur `B2` (`T2.1`–`T2.3`) pehle chahiye. Tab tak apni branch `main` se sync rakho.
+**Batch F3 (T7.6, T8.3-F, T9.3-F) complete.** Saare frontend pending tasks ab ho chuke hain (T6.1-F, T7.1–T7.6, T8.3-F, T9.3-F). Apni branch `frontend/sumit` ko `main` se sync rakho aur lead se PR merge ka intezaar karo.
 
 **C0 commit message:** `chore: scaffold land market monorepo and roadmap`

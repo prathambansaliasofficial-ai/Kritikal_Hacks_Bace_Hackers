@@ -268,6 +268,30 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** manual + `npm --prefix frontend run build`.
 
+### [.] T8.3-F — Frontend security/quality gate (frontend slice)
+
+**Done:** 2026-11-05 20:38 IST — Session 12
+
+**Kya hua:** `npm --prefix frontend run typecheck`, `build`, `audit --omit=dev` sab pass (0 vulnerabilities). Accessibility basics: `focus-visible` outline on interactive elements, disabled buttons while pending, `aria-live` status regions, accessible labels. Bundle chunk warning documented in `frontend/README.md`. `README.md` updated with final frontend commands (dev, typecheck, build, preview, audit).
+
+**Kya karta hai:** Frontend quality gate saaf hua; build pass.
+
+**Files:** `frontend/src/index.css`, `frontend/README.md`, `frontend/src/App.tsx`, `frontend/src/components/ListingCard.tsx`, `frontend/src/components/TradeStatus.tsx`.
+
+**Verify:** `npm --prefix frontend run build`.
+
+### [.] T9.3-F — Frontend production container (frontend slice)
+
+**Done:** 2026-11-05 20:38 IST — Session 12
+
+**Kya hua:** `frontend/Dockerfile` banaya — node:24-alpine builder stage (`npm ci` + `npm run build`) aur nginx:alpine serve stage (`/usr/share/nginx/html`, port 80). Public demo env/API base check document kiya `README.md` me (`VITE_API_BASE_URL`, `VITE_ESCROW_ADDRESS`, etc.).
+
+**Kya karta hai:** Frontend static build ko production container me serve kiya ja sakta hai.
+
+**Files:** `frontend/Dockerfile`, `frontend/README.md`.
+
+**Verify:** Dockerfile present; `npm --prefix frontend run build` uses documented commands.
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -718,15 +742,6 @@ fake run mat karo.
 3. `npm --prefix middleware audit --omit=dev`.
 **Verify:** all four commands pass; `.env` ignored.
 
-### [] T8.3-F — Frontend security/quality gate (frontend slice)
-
-**Owner:** Frontend.
-
-1. `npm --prefix frontend run typecheck`, `build`, `audit --omit=dev`.
-2. Accessibility basics, focus states, disabled buttons.
-3. Chunk warning fix or documented.
-**Verify:** `npm --prefix frontend run build`.
-
 ### [] T8.3-D — Final docs and architecture (lead slice)
 
 **Owner:** Lead.
@@ -771,10 +786,6 @@ AI tests; backend contract change only via lead.
 ### [] T9.3-M — Middleware production container (middleware slice)
 
 **Owner:** Middleware. `middleware/Dockerfile`.
-
-### [] T9.3-F — Frontend production container (frontend slice)
-
-**Owner:** Frontend. `frontend/Dockerfile`.
 
 ### [] T9.3-D — Public demo deployment (lead slice)
 
