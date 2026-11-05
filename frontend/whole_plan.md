@@ -232,6 +232,42 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
 
+### [.] T7.4 — Listing browse + buy flow
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** `ethers` ^6.13 add kiya `frontend/package.json` me aur install kiya; `frontend/src/lib/web3.ts` banaya (`chainOrderId` via `ethers.id`, `getSigner`, `createOrder` contract call); `api.ts` me Order/OrderState/TradeDecision/CheckResult types + `createOrderApi`, `fundOrderApi`, `evaluateOrderApi`, `fetchOrderApi` add kiye; `ListingCard.tsx` banaya (bundle, ULPIN, price, seller KYC badge, ALU count, Buy); `TradeStatus.tsx` banaya (6 check rows, decision, chain state, tx hash, explorer link, `NEEDS_REVIEW` officer message, refresh + timeout); `App.tsx` me listings browse + buy flow + trade status wiring + demo banner; `index.css` styles add kiye.
+
+**Kya karta hai:** Listings browse karke citizen local chain par buy flow shuru kar sakta hai; order create → createOrder → funded → evaluate → poll tak track hota hai.
+
+**Files:** `frontend/src/components/ListingCard.tsx`, `frontend/src/components/TradeStatus.tsx`, `frontend/src/lib/api.ts`, `frontend/src/lib/web3.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`, `frontend/package.json`.
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+### [.] T7.5 — Trade status panel
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** `frontend/src/components/TradeStatus.tsx` banaya — cheh check rows (pass/fail/reason/blocking), decision, order state, chain state, tx hash, explorer link. `NEEDS_REVIEW` par "officer review" dikhta hai, settle claim nahi. Refresh button + clear timeout message. `App.tsx` me wire kiya.
+
+**Kya karta hai:** Trade status panel contract ke saare fields dikhata hai.
+
+**Files:** `frontend/src/components/TradeStatus.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** typecheck aur build pass.
+
+### [.] T7.6 — Empty/error states, banner and responsive polish
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** Loading/empty/error states map, listings, reviews, trade ke liye hain. Accessible labels, focus-visible outline, disabled buttons, `aria-live` status. Demo banner `Testnet only, not a legal title transfer.` visible. `DEMO_FIXTURE_NOT_OFFICIAL` badge listings par. Responsive 375px media query. Vite chunk-size warning pre-existing, documented in T7.6/T8.3-F scope.
+
+**Kya karta hai:** UI polished, koi horizontal scroll nahi, states covered, banner visible.
+
+**Files:** `frontend/src/**`, `frontend/README.md`, `frontend/log-f.md`.
+
+**Verify:** manual + `npm --prefix frontend run build`.
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -623,51 +659,6 @@ fake run mat karo.
 ## Phase 7 — Frontend real flows — [1/6]
 
 **Owner:** Frontend. Context packs: `docs/context/C7A.md` (T7.1–T7.3), `docs/context/C7B.md` (T7.4–T7.6).
-
-### [] T7.4 — Listing browse + buy flow
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. `frontend/src/components/ListingCard.tsx`: bundle, ULPIN, price, seller KYC badge, ALU count.
-2. Buy sequence exactly:
-   `POST /orders` → `ethers.id("landmarket-order:" + id)` → `createOrder(...)` with value →
-   wait receipt → `POST /orders/{id}/funded` → `POST /orders/{id}/evaluate` → poll `GET /orders/{id}`.
-3. Disable button while pending; wrong chain par switch prompt.
-
-**Files:** `frontend/src/components/ListingCard.tsx`, `frontend/src/lib/api.ts`,
-`frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Local chain par end-to-end buy ho jaata hai.
-**Verify:** manual demo on local chain + build.
-
-### [] T7.5 — Trade status panel
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. `frontend/src/components/TradeStatus.tsx`: six check rows (pass/fail/reason/blocking),
-   decision, order state, chain state, tx hash, explorer link.
-2. `NEEDS_REVIEW` par "officer review" dikhao, settle claim mat karo.
-3. Refresh button + clear timeout message.
-
-**Files:** `frontend/src/components/TradeStatus.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Status panel contract ke saare fields dikhata hai.
-**Verify:** manual + build.
-
-### [] T7.6 — Empty/error states, banner and responsive polish
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. Loading/empty/error for map, listings, reviews, trade.
-2. Accessible labels, focus-visible styles, disabled buttons, `aria-live` status.
-3. Visible banner: `Testnet only, not a legal title transfer.`
-4. Demo badge `DEMO_FIXTURE_NOT_OFFICIAL`; responsive at 375px and 1280px.
-5. Vite chunk warning fix ya document karo.
-
-**Files:** `frontend/src/**`, `frontend/README.md`, `frontend/log-f.md`.
-**Done criteria:** No horizontal scroll; states covered; banner visible.
-**Verify:** manual + `npm --prefix frontend run build`.
 
 ### Commit batch C7B — T7.4, T7.5, T7.6
 

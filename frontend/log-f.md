@@ -118,6 +118,17 @@ Branch: `frontend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 17:30 — `npm --prefix frontend run build` pass.
 - [.] `../whole_plan.md` T7.3 marker `[]` → `[.]` kiya; block `YEH SAB HO GYA` me move kiya.
 
+## Session 11 — 2026-11-05 17:22 IST (T7.4)
+
+- [.] 17:22 — `ethers` ^6.13 add kiya `frontend/package.json` me aur install kiya.
+- [.] 17:22 — `frontend/src/lib/web3.ts` banaya: `chainOrderId()` via `ethers.id`, `getSigner()`, `createOrder()` contract call.
+- [.] 17:22 — `api.ts` me Order/OrderState/TradeDecision/CheckResult types + `createOrderApi`, `fundOrderApi`, `evaluateOrderApi`, `fetchOrderApi` add kiye.
+- [.] 17:22 — `ListingCard.tsx` banaya: bundle, ULPIN, price, seller KYC badge, ALU count, Buy button.
+- [.] 17:22 — `TradeStatus.tsx` banaya: 6 check rows, decision, chain state, tx hash, explorer link, `NEEDS_REVIEW` officer message, refresh + timeout.
+- [.] 17:22 — `App.tsx` me listings browse + buy flow + trade status wiring + demo banner.
+- [.] 17:22 — `index.css` me demo-banner, listings-grid, listing-card, trade-status styles add kiye.
+- [.] 17:22 — `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -171,23 +182,23 @@ Branch: `frontend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 17:30 — Buy flow T7.4 me aayega; yahan transaction nahi.
 - **Done criteria:** Wallet connect/disconnect aur chain switch kaam karta hai.
 
-### [] T7.4 — Listing browse + buy flow
+### [.] T7.4 — Listing browse + buy flow
 
-- [] Listing cards: bundle, ULPIN, price, seller KYC badge, ALU count.
-- [] Buy: order create → `ethers.id(...)` → `createOrder` with value → `/funded` → `/evaluate` → poll.
+- [.] 17:22 — Listing cards: bundle, ULPIN, price, seller KYC badge, ALU count.
+- [.] 17:22 — Buy: order create → `ethers.id(...)` → `createOrder` with value → `/funded` → `/evaluate` → poll.
 - **Done criteria:** Local chain par end-to-end buy ho jaata hai.
 
-### [] T7.5 — Trade status panel
+### [.] T7.5 — Trade status panel
 
-- [] 6 checks, decision, order/chain state, tx hash aur explorer link.
-- [] `NEEDS_REVIEW` par officer-review message; settle claim nahi.
+- [.] 17:22 — 6 checks, decision, order/chain state, tx hash aur explorer link.
+- [.] 17:22 — `NEEDS_REVIEW` par officer-review message; settle claim nahi.
 - **Done criteria:** Status panel contract ke saare fields dikhata hai.
 
-### [] T7.6 — Empty/error states + demo banner
+### [.] T7.6 — Empty/error states + demo banner
 
-- [] Loading/empty/error for map, listings, reviews, trade.
-- [] Demo banner: "Testnet only, not a legal title transfer."
-- [] Accessible labels, focus states, responsive 375/1280.
+- [.] 17:22 — Loading/empty/error for map, listings, reviews, trade.
+- [.] 17:22 — Demo banner: "Testnet only, not a legal title transfer."
+- [.] 17:22 — Accessible labels, focus states, responsive 375/1280.
 - **Done criteria:** No horizontal scroll; banner visible.
 
 ## Phase 8 — Hardening

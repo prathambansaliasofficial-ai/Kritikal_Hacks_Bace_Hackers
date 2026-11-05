@@ -84,6 +84,45 @@ export type Listing = {
   demo: boolean;
 };
 
+/* ---- Order types (docs/api-contract.md §2.4, §3) ---- */
+
+export type OrderState = "CREATED" | "FUNDED" | "SETTLED" | "REFUNDED" | "FAILED";
+export type TradeDecision = "APPROVED" | "NEEDS_REVIEW" | "REJECTED";
+
+export type CheckResult = {
+  name: "LISTED" | "BUNDLE_INTACT" | "KYC_WALLET" | "ZONING_OK" | "FUNDS_IN_ESCROW" | "TRADE_MATCH";
+  passed: boolean;
+  reason: string;
+  blocking: boolean;
+};
+
+export type Order = {
+  id: number;
+  listing_id: number;
+  buyer_wallet: string;
+  seller_wallet: string;
+  amount_wei: string;
+  state: OrderState;
+  chain_order_id: string | null;
+  tx_hash: string | null;
+  evidence_hash: string | null;
+  checks: CheckResult[];
+  decision: TradeDecision | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateOrderRequest = {
+  listing_id: number;
+  buyer_wallet: string;
+};
+
+export type FundOrderRequest = {
+  chain_order_id: string;
+  tx_hash: string;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json", ...init?.headers },
@@ -199,6 +238,39 @@ export function submitReviewDecision(
     headers: { "X-Officer-Token": officer },
     body: JSON.stringify({ decision, reason, officer }),
   });
+}
+
+/* ---- Order API (docs/api-contract.md §3) ---- */
+
+export function createOrderApi(
+  listingId: number,
+  buyerWallet: string,
+): Promise<Order> {
+  return request<Order>("/api/v1/orders", {
+    method: "POST",
+    body: JSON.stringify({ listing_id: listingId, buyer_wallet: buyerWallet }),
+  });
+}
+
+export function fundOrderApi(
+  orderId: number,
+  chainOrderId: string,
+  txHash: string,
+): Promise<Order> {
+  return request<Order>(`/api/v1/orders/${orderId}/funded`, {
+    method: "POST",
+    body: JSON.stringify({ chain_order_id: chainOrderId, tx_hash: txHash }),
+  });
+}
+
+export function evaluateOrderApi(orderId: number): Promise<Order> {
+  return request<Order>(`/api/v1/orders/${orderId}/evaluate`, {
+    method: "POST",
+  });
+}
+
+export function fetchOrderApi(orderId: number): Promise<Order> {
+  return request<Order>(`/api/v1/orders/${orderId}`);
 }
 
 export { API_BASE_URL };
