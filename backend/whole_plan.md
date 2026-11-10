@@ -261,6 +261,37 @@ GET found/missing, PATCH happy) via mocked repo; live DB needs Docker.
 
 **Message:** `feat(api): expose parcels, alu grid and bundles`
 
+### [.] T3.2 — Evidence validate, hash aur DB me save karo
+
+**Done:** 2026-11-10 14:00 IST — Session 9
+
+**Kya hua:** `backend/app/services/evidence.py` banaya — EVIDENCE_FIELDS (21 keys), normalize_sheet (missing/invalid → N/D, extra dropped), canonical_hash (0x + sha256 canonical JSON per decisions §4). `POST /api/v1/verifications` update kiya: middleware ko camelCase `sourceUrl` bhejta hai; response validate karta hai (middleware down 503, invalid sheet 422, other error 502); `evidence_sheets` me payload/source_refs/tinyfish_run_id/status='PENDING' save karta hai; hash payload ke andar aur top-level `evidence_hash` dono mein store karta hai; return `{ulpin,status,evidence_id,evidence_hash,tinyfish_run_id,fields,sources}`. `backend/app/api/routes/evidence.py`: GET /evidence/{id}, GET /evidence?ulpin=. `backend/app/repositories/evidence.py`: create_evidence_sheet, get_evidence_sheet, list_evidence_sheets. Routers registered in app/api/main.py.
+**Kya karta hai:** TinyFish evidence validate → hash → persist, evidence GET endpoints.
+**Files:** `backend/app/services/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/api/routes/verifications.py`, `backend/app/api/routes/evidence.py`, `backend/app/api/main.py`, `backend/tests/test_evidence.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_evidence.py` pass (normalize, hash determinism, happy path, middleware down 503, invalid sheet 422, middleware error 502, blank ulpin 422).
+
+### [.] T3.3 — Officer review queue
+
+**Done:** 2026-11-10 14:00 IST — Session 9
+
+**Kya hua:** `backend/db/004_review.sql` banaya — evidence_sheets me `review_reason TEXT`, `reviewed_at TIMESTAMPTZ` (IF NOT EXISTS). `backend/app/repositories/evidence.py` me list_reviews aur decide_review (APPROVE→CLEAN, REJECT→REJECTED, PENDING/NEEDS_REVIEW se hi allowed, repeat → ValueError→409, reject bina reason → 422). `backend/app/api/routes/reviews.py`: GET /reviews?status=PENDING|NEEDS_REVIEW, POST /reviews/{id}/decision with X-Officer-Token (401 missing/wrong); reviewed_by, review_reason, reviewed_at save karta hai. Router registered in app/api/main.py.
+**Kya karta hai:** Officer review queue aur evidence approve/reject transition.
+**Files:** `backend/db/004_review.sql`, `backend/app/api/routes/reviews.py`, `backend/app/repositories/evidence.py`, `backend/app/api/main.py`, `backend/tests/test_reviews.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_reviews.py` pass (pending items, approve, reject, 401 missing/wrong token, 422 reject-no-reason, 409 already-decided, 404 not found).
+
+### [.] T4.1 — Wallet user aur KYC stub
+
+**Done:** 2026-11-10 14:00 IST — Session 9
+
+**Kya hua:** `backend/db/005_users.sql` banaya — users (id, wallet_address UNIQUE, role CITIZEN/OFFICER, kyc_status PENDING/VERIFIED/REJECTED, timestamps). `backend/app/repositories/users.py` — is_valid_wallet (`^0x[a-fA-F0-9]{40}$`), upsert_user, get_user, update_kyc. `backend/app/api/routes/users.py`: POST /users (upsert, 200), GET /users/{wallet} (404 missing, 422 invalid wallet), POST /users/{wallet}/kyc (X-Officer-Token vs DEV_OFFICER_TOKEN, 401/402/409, KYC update 200). `backend/.env.example` aur `backend/.env` me DEV_OFFICER_TOKEN add kiya; `app/core/config.py` me `dev_officer_token` field add kiya. Router registered in app/api/main.py.
+**Kya karta hai:** Wallet user upsert aur prototype KYC stub (officer token auth).
+**Files:** `backend/db/005_users.sql`, `backend/app/api/routes/users.py`, `backend/app/repositories/users.py`, `backend/app/api/main.py`, `backend/.env.example`, `backend/.env`, `backend/app/core/config.py`, `backend/tests/test_users.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_users.py` pass (invalid wallet 422, upsert, get found/missing, missing/wrong token 401, KYC update 200).
+
+### Commit batch C3 — T3.2, T3.3, T4.1
+
+**Message:** `feat(evidence): persist evidence, review queue and wallet users`
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -320,67 +351,13 @@ fake run mat karo.
 **Done criteria:** Real `COMPLETE` event + kam se kam 1 asli source URL document ho.
 **Verify:** `npm --prefix middleware run smoke:tinyfish`.
 
-### [] T3.2 — Evidence validate, hash aur DB me save karo
-
-**Kya karna hai**
-1. `backend/app/services/evidence.py`: 21 fields ki list, missing fields ko `N/D` banao,
-   canonical JSON (sorted keys) ka SHA-256 hash nikalo.
-2. `POST /api/v1/verifications` update karo: middleware response validate karke
-   `evidence_sheets` me save kare; response me `evidence_id`, `evidence_hash`, `status`,
-   `fields`, `sources`, `tinyfish_run_id` de.
-3. `GET /api/v1/evidence/{id}` aur `GET /api/v1/evidence?ulpin=...` add karo.
-4. Middleware down ho to 503, invalid sheet ho to 422; raw data kabhi invent na karo.
-5. Tests: mocked middleware response se persistence + hash determinism.
-
-**Files:** `backend/app/services/evidence.py`, `backend/app/repositories/evidence.py`,
-`backend/app/api/routes/verifications.py`, `backend/app/api/routes/evidence.py`,
-`backend/app/api/main.py`, `backend/tests/test_evidence.py`.
-**Done criteria:** Ek verification ke baad DB row + stable hash; GET se same sheet mile.
-**Verify:** `pytest -q backend/tests/test_evidence.py`.
-
-### [] T3.3 — Officer review queue
-
-**Kya karna hai**
-1. `backend/db/004_review.sql`: `evidence_sheets` me `review_reason TEXT`, `reviewed_at TIMESTAMPTZ`.
-2. Routes: `GET /api/v1/reviews?status=PENDING` (evidence + parcel summary),
-   `POST /api/v1/reviews/{id}/decision` `{decision: APPROVE|REJECT, reason, officer}`.
-3. Transitions: `PENDING/NEEDS_REVIEW` → `CLEAN` ya `REJECTED`; dobara decision par 409.
-4. `reviewed_by`, `review_reason`, `reviewed_at` save karo. Auth abhi officer string hai —
-   JWT T4.1 me aayega, code me TODO note karo.
-5. Tests: valid transitions, invalid transition 409, reason required on reject.
-
-**Files:** `backend/db/004_review.sql`, `backend/app/api/routes/reviews.py`,
-`backend/app/repositories/evidence.py`, `backend/app/api/main.py`, `backend/tests/test_reviews.py`.
-**Done criteria:** Officer pending evidence approve/reject kar sakta hai; audit fields bharte hain.
-**Verify:** `pytest -q backend/tests/test_reviews.py`.
-
-### Commit batch C3 — T3.1, T3.2, T3.3
-
-**Message:** `feat(evidence): add tinyfish proof, persistence and review queue`
 
 ---
+
 
 ## Phase 4 — Identity, listing aur order — [0/3]
 
 **Owner:** Backend. Context pack: `docs/context/C4.md`.
-
-### [] T4.1 — Wallet user aur KYC stub
-
-**Kya karna hai**
-1. `backend/db/005_users.sql`: `users` (id, wallet_address unique, role `CITIZEN/OFFICER`,
-   kyc_status `PENDING/VERIFIED/REJECTED`, created_at, updated_at).
-2. Routes: `POST /api/v1/users` upsert wallet, `GET /api/v1/users/{wallet}`,
-   `POST /api/v1/users/{wallet}/kyc` `{status, reason}`.
-3. KYC endpoint ko `X-Officer-Token` header chahiye; value `.env` ke `DEV_OFFICER_TOKEN` se match kare.
-   Ye prototype stub hai — document me clearly likho.
-4. Wallet format validate karo (`0x` + 40 hex).
-5. Tests: invalid wallet 422, missing token 401, KYC update 200.
-
-**Files:** `backend/db/005_users.sql`, `backend/app/api/routes/users.py`,
-`backend/app/repositories/users.py`, `backend/app/api/main.py`, `backend/.env.example`,
-`backend/tests/test_users.py`.
-**Done criteria:** Demo buyer/seller KYC VERIFIED ho jaate hain.
-**Verify:** `pytest -q backend/tests/test_users.py`.
 
 ### [] T4.2 — Listing create/browse/pause
 
