@@ -1,83 +1,72 @@
-# Six checks and decision policy
+# Checks — six-check trade rule engine
 
-`backend/app/services/checks.py` implements these as pure functions. Each returns exactly:
-
-```json
-{ "name": "LISTED", "passed": true, "reason": "Listing is LISTED.", "blocking": true }
-```
-
-Names and order are fixed: `LISTED`, `BUNDLE_INTACT`, `KYC_WALLET`, `ZONING_OK`,
-`FUNDS_IN_ESCROW`, `TRADE_MATCH`.
+Policy for `backend/app/services/checks.py`. These rules decide whether a trade
+(order) may be settled, rejected, or needs officer review. They are prototype
+assumptions for the hackathon demo and are intentionally simple.
 
 ## Decision mapping
 
-```text
-any blocking check fails       -> REJECTED
-else any non-blocking fails     -> NEEDS_REVIEW
-else all pass                   -> APPROVED
-```
+| Outcome | Condition |
+|---------|-----------|
+| `APPROVED` | All six checks pass |
+| `REJECTED` | Any check fails (all checks are blocking) |
+| `NEEDS_REVIEW` | No blocking check failed, but evidence is missing / N/D |
 
-Settlement: `APPROVED` → `settle()`; `REJECTED` → `refund()`; `NEEDS_REVIEW` → no chain call.
-A middleware/chain outage is an API error (502/503), not a check result and not a decision.
+A blocking check failure triggers the refund path; `NEEDS_REVIEW` triggers no
+chain call and sends the evidence to the officer review queue.
 
-## 1. LISTED — blocking
+## The six checks
 
-Pass when the order's listing exists and `listing.status == 'LISTED'`. A `SOLD`,
-`PAUSED`, `CANCELLED`, or `DRAFT` listing fails.
+All checks return `CheckResult(name, passed, reason, blocking)`. Every check is
+blocking (`blocking=true`), so a failure rejects the trade.
 
-## 2. BUNDLE_INTACT — blocking
+### 1. LISTED
+The listing referenced by the order must exist and have status `LISTED`, and the
+order must reference that listing.
 
-Pass when all are true:
+- Pass: listing `status == "LISTED"` and order.listing_id == listing.id.
+- Fail: any other listing status, or order references a different listing.
 
-- listing has a `bundle_id`, bundle exists, `bundle.status == 'ACTIVE'`;
-- `bundle_alus` contains at least one ALU;
-- every bundle ALU exists and is linked to the listing's parcel with `CONTAINS`;
-- no **other** order for the same bundle is in `CREATED`, `FUNDED`, or `SETTLED`
-  (exclude the current order; `FAILED`/`REFUNDED` do not block).
+### 2. BUNDLE_INTACT
+The listing's bundle must be `ACTIVE`, every ALU in the bundle must be present,
+and no ALU in the bundle may be locked by another active order.
 
-This is a demo lock. Full per-ALU locking is stretch task T9.1.
+- Pass: bundle `status == "ACTIVE"`, all ALUs present, no ALU conflict.
+- Fail: bundle not ACTIVE, missing ALU, or ALU in another active order.
 
-## 3. KYC_WALLET — blocking
+### 3. KYC_WALLET
+Both buyer and seller must have KYC status `VERIFIED`.
 
-Pass when buyer and seller user rows exist, differ, and both have
-`kyc_status == 'VERIFIED'`. Missing user or any other status fails.
+- Pass: `buyer.kyc_status == "VERIFIED"` and `seller.kyc_status == "VERIFIED"`.
+- Fail: either party is `PENDING` or `REJECTED`.
 
-## 4. ZONING_OK — non-blocking
+### 4. ZONING_OK
+Evidence field `land_use_zoning` must be present and indicate a tradeable zone
+(`available`, `partial`, `residential`, `commercial`, `mixed`). It must not be
+`restricted` or `agricultural`.
 
-Read evidence field `land_use_zoning`:
+- Pass: zoning available/partial/tradeable.
+- Fail: zoning restricted/agricultural or unrecognized.
+- Missing (N/D): fails but contributes to `NEEDS_REVIEW` when no other check
+  blocked.
 
-- `AVAILABLE` or `PARTIAL` with non-empty value:
-  - value contains any restricted term (case-insensitive): `agricultural`, `restricted`,
-    `forest`, `no-development`, `no development` → fail with `blocking: true`;
-  - otherwise pass.
-- `N/A`, `N/D`, missing field, or empty value → fail with `blocking: false` (review).
+### 5. FUNDS_IN_ESCROW
+The order must be `FUNDED` and the chain escrow state must be `Funded (1)`.
 
-Demo assumption: residential/commercial/mixed values are tradeable. This is not legal advice.
+- Pass: `order.state == "FUNDED"` and chain state `1`.
+- Fail: order not FUNDED, or chain not Funded.
 
-## 5. FUNDS_IN_ESCROW — blocking
+### 6. TRADE_MATCH
+Listing ULPIN, bundle ULPIN, parcel ULPIN, and evidence ULPIN must all refer to
+the same parcel, and buyer and seller must be different wallets.
 
-Pass when `order.state == 'FUNDED'` and middleware `GET /escrow/status/{chain_order_id}`
-returns `state == 1`. `CREATED`, `SETTLED`, `REFUNDED`, or chain state `0/2/3` fails.
-If the status call fails, evaluate returns 502; do not store a decision.
+- Pass: all ULPINs equal and buyer != seller.
+- Fail: any ULPIN mismatch, or buyer == seller.
 
-## 6. TRADE_MATCH — blocking
+## Demo assumptions
 
-Pass when all are true:
-
-- listing ULPIN == bundle ULPIN == parcel ULPIN;
-- evidence ULPIN == parcel ULPIN;
-- buyer wallet != seller wallet;
-- `order.amount_wei == listing.price_wei`;
-- backend-recomputed `chain_order_id` matches the stored value.
-
-Missing evidence ULPIN fails with `blocking: false` (review); the other mismatches are
-blocking. Evidence does not decide the trade by itself.
-
-## Demo fixtures
-
-- Parcel: `DEMO-ULPIN-001`; bundle: four `10m` ALUs.
-- Buyer: `0x1111111111111111111111111111111111111111`.
-- Seller: `0x2222222222222222222222222222222222222222`.
-- Officer: `0x3333333333333333333333333333333333333333`.
-- Price: `10000000000000000` wei.
-- Evidence zoning: `Residential`; missing case: `N/D` → `NEEDS_REVIEW`.
+- All seeded data is `DEMO_FIXTURE_NOT_OFFICIAL`; not an official land record.
+- KYC is a prototype status flag, not identity verification.
+- Chain is local Hardhat (31337) or Sepolia testnet; no mainnet, no real money.
+- Evidence is collected by TinyFish; the backend applies these fixed rules.
+- Missing evidence defaults to `N/D` and never forces an approval.

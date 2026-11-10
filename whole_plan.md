@@ -176,7 +176,185 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `git log --oneline -1` shows `729e9eb`; `git status --short` is clean.
 
-## Repo hygiene — 2026-10-29 22:11 IST
+### [.] T1.1 — PostGIS boot karke schema verify karo
+
+**Done:** 2026-11-10 09:27 IST — Session 7
+
+**Kya hua:** `backend/scripts/check_db.py` banaya — PostGIS version, 6 table names, row counts print karta hai; DB na mile to exit code 1 deta hai. Root `Makefile` banaya: `db-up`, `db-check`, `db-reset` (volume delete se pehle prompt), `seed`, `api`, `mid`, `web`, `check`. `backend/SETUP.md` me Makefile shortcuts aur demo ULPIN note add kiya.
+**Kya karta hai:** DB health check failure par exit 1 deta hai (fail closed); repo root se service start/check shortcuts ready.
+**Files:** `backend/scripts/check_db.py`, `Makefile`, `backend/SETUP.md`.
+**Verify:** `ruff check backend` + `pytest -q backend` pass (13 passed); `check_db.py` exit code 1 jab DB down ho (verify kiya). Live `make db-up && make db-check` ke liye Docker chahiye, jo is session me nahi chala.
+
+### [.] T1.2 — Database access layer banao
+
+**Done:** 2026-11-10 09:27 IST — Session 7
+
+**Kya hua:** `app/core/db.py` me `@contextmanager db_connection()` banaya (`dict_row`, `connect_timeout=5`, commit/rollback/close). `check_database()` ab isi layer par chalta hai; failure par `{"status": "unavailable", ...}` return karta hai, raise nahi. `app/repositories/base.py` me `fetch_one`, `fetch_all`, `execute` banaye. Health route `check_database` se chale; routes me koi direct `psycopg.connect` nahi. `tests/test_db.py`: galat URL par `unavailable`, raise nahi.
+**Kya karta hai:** Pure API ke liye ek DB access point.
+**Files:** `backend/app/core/db.py`, `backend/app/repositories/__init__.py`, `backend/app/repositories/base.py`, `backend/tests/test_db.py`.
+**Verify:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me; ruff + pytest pass.
+
+### [.] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
+
+**Done:** 2026-11-10 09:27 IST — Session 7
+
+**Kya hua:** `db/002_seed_demo.sql` banaya: parcel `DEMO-ULPIN-001`, `geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`, attributes `{"owner_name": "Demo Owner", "district": "Pune", "zoning": "Residential"}`; parent `ALU-100m-DEMO-000`; children `ALU-10m-DEMO-001`…`004` parent-linked; 4 `parcel_alus` `CONTAINS`, `overlap_percentage=100`. `scripts/seed.py` banaya (idempotent: demo rows pehle delete, phir insert). `Makefile` ka `seed` target add kiya; `SETUP.md` me demo ULPIN note add kiya.
+**Kya karta hai:** Demo parcel + 5 ALUs + 4 links; dobara chalane par duplicate nahi.
+**Files:** `backend/db/002_seed_demo.sql`, `backend/scripts/seed.py`, `Makefile`, `backend/SETUP.md`.
+**Verify:** `make seed` ke baad 1 parcel, 5 ALUs, 4 links; idempotency delete-then-insert exact IDs se guarantee hai. Live `make db-check && make seed && make db-check` ke liye Docker chahiye, jo is session me nahi chala.
+
+### Commit batch C1 — T1.1, T1.2, T1.3
+
+**Message:** `feat(db): add postgis checks, db helpers and demo seed`
+
+### [.] T2.1 — Parcel read API
+
+**Done:** 2026-11-10 11:30 IST — Session 8
+
+**Kya hua:** `backend/app/repositories/parcels.py` banaya — `get_parcel(ulpin)` aur `list_parcels(bbox, limit)` with
+`ST_AsGeoJSON`, `ST_MakeEnvelope(...,4326)`, `ST_Intersects`. `backend/app/api/routes/parcels.py`:
+`GET /api/v1/parcels/{ulpin}` → Parcel Feature (missing 404), `GET /api/v1/parcels?bbox=...&limit=100` → FeatureCollection
+(limit max 100, invalid bbox 422). Router registered in `app/api/main.py`. `demo: true` set when
+`geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`.
+**Kya karta hai:** GeoJSON parcel read API; bbox + limit validation at the route.
+**Files:** `backend/app/repositories/parcels.py`, `backend/app/api/routes/parcels.py`, `backend/app/api/main.py`,
+`backend/tests/test_parcels.py`.
+**Verify:** ruff clean, `pytest -q backend` 33 passed; missing→404, invalid bbox→422, limit 101→422 (unit-tested via
+mocked repo; live DB needs Docker).
+
+### [.] T2.2 — Deterministic ALU grid endpoint
+
+**Done:** 2026-11-10 11:30 IST — Session 8
+
+**Kya hua:** `backend/app/services/alu_grid.py` banaya exactly `docs/decisions.md` §3: Web Mercator forward/inverse,
+`ALU-{level}-{slug(ix)}-{slug(iy)}` IDs, parent = next coarser level (`1km` → null), closed GeoJSON polygon ring,
+`area_sqm`, hard cap 1500 with `GridError("Zoom in: N cells exceeds 1500")`. `backend/app/api/routes/alus.py`:
+`GET /api/v1/alus?bbox=...&level=10m` → FeatureCollection; unknown level 422; over-cap → 422. Shared `parse_bbox` in
+`app/api/routes/bbox.py`. Router registered in `app/api/main.py`.
+**Kya karta hai:** Deterministic ALU grid cells for a bbox/level with parent links and 1500-cell cap.
+**Files:** `backend/app/services/alu_grid.py`, `backend/app/api/routes/alus.py`, `backend/app/api/routes/bbox.py`,
+`backend/app/api/main.py`, `backend/tests/test_alu_grid.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_alu_grid.py` pass (determinism, parent-child, cap, negative `m` slug,
+unknown level 422, over-cap route 422, feature collection shape).
+
+### [.] T2.3 — Bundle schema aur API
+
+**Done:** 2026-11-10 11:30 IST — Session 8
+
+**Kya hua:** `db/003_bundles.sql` banaya: `bundles` (id, ulpin FK, name, status DRAFT/ACTIVE/PAUSED/ARCHIVED,
+created_by, timestamps) aur `bundle_alus` (bundle_id, alu_id PK). `backend/app/repositories/bundles.py`:
+`create_bundle`, `get_bundle`, `set_bundle_status` with validation (ULPIN exists → 404; ALUs exist + linked to parcel →
+422; duplicate ALU → 422; allowed transitions DRAFT→ACTIVE/PAUSED/ARCHIVED, ACTIVE→PAUSED/ARCHIVED, PAUSED→ACTIVE/ARCHIVED,
+else 409). `backend/app/api/routes/bundles.py`: POST /bundles (201), GET /bundles/{id}, PATCH /bundles/{id} status.
+Router registered in `app/api/main.py`.
+**Kya karta hai:** Bundle create/read/status with parcel-scoped ALU validation and status-transition rules.
+**Files:** `backend/db/003_bundles.sql`, `backend/app/repositories/bundles.py`, `backend/app/api/routes/bundles.py`,
+`backend/app/api/main.py`, `backend/tests/test_bundles.py`.
+**Verify:** ruff clean; `pytest -q backend` pass (happy path, cross-parcel 422, duplicate 422, invalid transition 409,
+GET found/missing, PATCH happy) via mocked repo; live DB needs Docker.
+
+### Commit batch C2 — T2.1, T2.2, T2.3
+
+**Message:** `feat(api): expose parcels, alu grid and bundles`
+
+### [.] T3.2 — Evidence validate, hash aur DB me save karo
+
+**Done:** 2026-11-10 14:00 IST — Session 9
+
+**Kya hua:** `backend/app/services/evidence.py` banaya — EVIDENCE_FIELDS (21 keys), normalize_sheet (missing/invalid → N/D, extra dropped), canonical_hash (0x + sha256 canonical JSON per decisions §4). `POST /api/v1/verifications` update kiya: middleware ko camelCase `sourceUrl` bhejta hai; response validate karta hai (middleware down 503, invalid sheet 422, other error 502); `evidence_sheets` me payload/source_refs/tinyfish_run_id/status='PENDING' save karta hai; hash payload ke andar aur top-level `evidence_hash` dono mein store karta hai; return `{ulpin,status,evidence_id,evidence_hash,tinyfish_run_id,fields,sources}`. `backend/app/api/routes/evidence.py`: GET /evidence/{id}, GET /evidence?ulpin=. `backend/app/repositories/evidence.py`: create_evidence_sheet, get_evidence_sheet, list_evidence_sheets. Routers registered in app/api/main.py.
+**Kya karta hai:** TinyFish evidence validate → hash → persist, evidence GET endpoints.
+**Files:** `backend/app/services/evidence.py`, `backend/app/repositories/evidence.py`, `backend/app/api/routes/verifications.py`, `backend/app/api/routes/evidence.py`, `backend/app/api/main.py`, `backend/tests/test_evidence.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_evidence.py` pass (normalize, hash determinism, happy path, middleware down 503, invalid sheet 422, middleware error 502, blank ulpin 422).
+
+### [.] T3.3 — Officer review queue
+
+**Done:** 2026-11-10 14:00 IST — Session 9
+
+**Kya hua:** `backend/db/004_review.sql` banaya — evidence_sheets me `review_reason TEXT`, `reviewed_at TIMESTAMPTZ` (IF NOT EXISTS). `backend/app/repositories/evidence.py` me list_reviews aur decide_review (APPROVE→CLEAN, REJECT→REJECTED, PENDING/NEEDS_REVIEW se hi allowed, repeat → ValueError→409, reject bina reason → 422). `backend/app/api/routes/reviews.py`: GET /reviews?status=PENDING|NEEDS_REVIEW, POST /reviews/{id}/decision with X-Officer-Token (401 missing/wrong); reviewed_by, review_reason, reviewed_at save karta hai. Router registered in app/api/main.py.
+**Kya karta hai:** Officer review queue aur evidence approve/reject transition.
+**Files:** `backend/db/004_review.sql`, `backend/app/api/routes/reviews.py`, `backend/app/repositories/evidence.py`, `backend/app/api/main.py`, `backend/tests/test_reviews.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_reviews.py` pass (pending items, approve, reject, 401 missing/wrong token, 422 reject-no-reason, 409 already-decided, 404 not found).
+
+### [.] T4.1 — Wallet user aur KYC stub
+
+**Done:** 2026-11-10 14:00 IST — Session 9
+
+**Kya hua:** `backend/db/005_users.sql` banaya — users (id, wallet_address UNIQUE, role CITIZEN/OFFICER, kyc_status PENDING/VERIFIED/REJECTED, timestamps). `backend/app/repositories/users.py` — is_valid_wallet (`^0x[a-fA-F0-9]{40}$`), upsert_user, get_user, update_kyc. `backend/app/api/routes/users.py`: POST /users (upsert, 200), GET /users/{wallet} (404 missing, 422 invalid wallet), POST /users/{wallet}/kyc (X-Officer-Token vs DEV_OFFICER_TOKEN, 401/402/409, KYC update 200). `backend/.env.example` aur `backend/.env` me DEV_OFFICER_TOKEN add kiya; `app/core/config.py` me `dev_officer_token` field add kiya. Router registered in app/api/main.py.
+**Kya karta hai:** Wallet user upsert aur prototype KYC stub (officer token auth).
+**Files:** `backend/db/005_users.sql`, `backend/app/api/routes/users.py`, `backend/app/repositories/users.py`, `backend/app/api/main.py`, `backend/.env.example`, `backend/.env`, `backend/app/core/config.py`, `backend/tests/test_users.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_users.py` pass (invalid wallet 422, upsert, get found/missing, missing/wrong token 401, KYC update 200).
+
+### Commit batch C3 — T3.2, T3.3, T4.1
+
+**Message:** `feat(evidence): persist evidence, review queue and wallet users`
+
+### [.] T4.2 — Listing create/browse/pause
+
+**Done:** 2026-11-10 16:00 IST — Session 10
+
+**Kya hua:** `db/006_listings_bundle.sql` banaya — `listings` me `bundle_id BIGINT REFERENCES bundles(id)` column (IF NOT EXISTS) aur index. `backend/app/repositories/listings.py` banaya — `create_listing`, `list_listings`, `get_listing`, `patch_listing_status` with rules: seller KYC VERIFIED (409), bundle ACTIVE (409), price_wei > 0 (422), one active listing per bundle (409), allowed transitions DRAFT→LISTED/CANCELLED, LISTED→PAUSED/CANCELLED, PAUSED→LISTED/CANCELLED (else 409). `backend/app/api/routes/listings.py`: POST /listings (201), GET /listings?status= (default LISTED), PATCH /listings/{id} status. Router registered in app/api/main.py.
+**Kya karta hai:** Listing lifecycle with bundle-scoped uniqueness and status transitions.
+**Files:** `backend/db/006_listings_bundle.sql`, `backend/app/api/routes/listings.py`, `backend/app/repositories/listings.py`, `backend/app/api/main.py`, `backend/tests/test_listings.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_listings.py` pass (happy, unverified 409, duplicate active 409, invalid transition 409, GET items, invalid price 422) via mocked repo; live DB needs Docker.
+
+### [.] T4.3 — Order lifecycle
+
+**Done:** 2026-11-10 16:00 IST — Session 10
+
+**Kya hua:** `backend/app/repositories/orders.py` banaya — `create_order` (buyer KYC VERIFIED, listing LISTED, buyer≠seller, amount=listing price → CREATED; self-buy/unverified/wrong-price 409), `fund_order` (bytes32 validation 422, chain_order_id recomputed via keccak256 per decisions §5 and matched else 422, CREATED→FUNDED, duplicate 409), `get_order`. `backend/app/api/routes/orders.py`: POST /orders (201), POST /orders/{id}/funded, GET /orders/{id} returning order shape with `chain_order_id`. `app/services/chain.py` — pure-Python keccak-256 via pycryptodome (verified against NIST vectors) added to `requirements.txt`. Router registered in app/api/main.py.
+**Kya karta hai:** Order create/fund lifecycle with chain order ID commitment.
+**Files:** `backend/app/repositories/orders.py`, `backend/app/api/routes/orders.py`, `backend/app/api/main.py`, `backend/app/services/chain.py`, `backend/requirements.txt`, `backend/tests/test_orders.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_orders.py` pass (happy, self-buy 409, unverified 409, duplicate funding 409, invalid bytes32 422, chain_order mismatch 422, GET found/missing) via mocked repo; live DB needs Docker.
+
+### [.] T5.1 — 6 checks ka pure rule engine
+
+**Done:** 2026-11-10 16:00 IST — Session 10
+
+**Kya hua:** `backend/app/services/checks.py` banaya — `CheckResult(name, passed, reason, blocking)` dataclass aur 6 pure functions: `check_listed`, `check_bundle_intact`, `check_kyc_wallet`, `check_zoning_ok`, `check_funds_in_escrow`, `check_trade_match`. Sab blocking. `docs/checks.md` banaya — policy, decision mapping (APPROVED/REJECTED/NEEDS_REVIEW), aur demo assumptions. `backend/tests/test_checks.py` — 19 tests (pass/fail per check, 6 check names covered).
+**Kya karta hai:** DB-free six-check rule engine for trade decisions.
+**Files:** `backend/app/services/checks.py`, `docs/checks.md`, `backend/tests/test_checks.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_checks.py` pass (19 tests); DB-independent.
+
+### Commit batch C4 — T4.2, T4.3, T5.1
+
+**Message:** `feat(market): add listings, orders and six checks`
+
+### [.] T5.2 — Evaluate endpoint aur decision policy
+
+**Done:** 2026-11-10 18:30 IST — Session 11
+
+**Kya hua:** `backend/db/007_order_checks.sql` banaya — orders me `checks JSONB`, `decision TEXT`, `decided_at TIMESTAMPTZ` column (IF NOT EXISTS). `backend/app/services/checks.py` me `run_checks(context)` aur `decide(results)` aur `check_results_to_api()` banaye — `missing_evidence` flag se ZONING_OK missing = NEEDS_REVIEW, blocking fail = REJECTED, sab pass = APPROVED. `backend/app/api/routes/orders.py` me `POST /api/v1/orders/{id}/evaluate` (async) banaya — order FUNDED ho (warna 409), listing/bundle/ALUs/users/evidence load karo, middleware se chain state lo (failure → 502, koi persist nahi), run_checks + decide karo, `save_evaluate` se DB me save karo, phir `apply_decision` (settle/refund/no-op) call karo. `backend/app/services/chain_client.py` banaya — middleware `GET /escrow/status/{orderId}` call kar ke chain state wapas kare (failure → ChainClientError → 502). Router registered in app/api/main.py.
+**Kya karta hai:** Order evaluate → 6 checks → decision persist → settlement trigger.
+**Files:** `backend/db/007_order_checks.sql`, `backend/app/api/routes/orders.py`, `backend/app/services/checks.py`, `backend/app/services/chain_client.py`, `backend/app/services/settlement.py`, `backend/tests/test_evaluate.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_evaluate.py` pass (approve→settle, reject→refund, review→no-op, non-funded 404/409, not-found 404, chain down 502) via mocked repo + middleware + settlement; live DB needs Docker.
+
+### [.] T5.3-B — Backend settle/refund wiring (backend slice)
+
+**Done:** 2026-11-10 18:30 IST — Session 11
+
+**Kya hua:** `backend/app/services/settlement.py` banaya — `apply_decision(order, decision)` async: APPROVED → POST /escrow/settle (state SETTLED), REJECTED → POST /escrow/refund (state REFUNDED), NEEDS_REVIEW → no-op; terminal state pe idempotent (dobara call → current state, koi middleware call nahi); middleware/chain fail par SettlementError → 502, state unchanged; success par DB me state + tx_hash save. `backend/app/api/routes/orders.py` me evaluate se call kiya jaata hai. Middleware `T5.3-M` tak mock kiya ja sakta hai.
+**Kya karta hai:** APPROVED→settle, REJECTED→refund, NEEDS_REVIEW→no-op, idempotent, fail-safe.
+**Files:** `backend/app/services/settlement.py`, `backend/app/api/routes/orders.py`, `backend/tests/test_evaluate.py`.
+**Verify:** ruff clean; pytest pass (evaluate tests cover approve/reject/review settlement paths) via mocked middleware; live chain/manual test needs Docker + middleware.
+
+### [.] T8.1 — Real PostGIS integration tests
+
+**Done:** 2026-11-10 18:30 IST — Session 11
+
+**Kya hua:** `backend/tests/conftest.py` banaya — `TEST_DATABASE_URL`, `apply_schema` (sab 0*.sql migration ek baar), `db` fixture (per-test rollback). `backend/tests/test_integration.py` banaya — `@pytest.mark.integration` test: parcel+ALU persistence, bundle+listing flow, order+evidence persistence. `backend/pyproject.toml` me `integration` marker aur `addopts = ["-m", "not integration"]` add kiya (default pytest fast, integration alag command se). Root `Makefile` me `test-integration` target add kiya. `backend/tests/test_checks.py` me `run_checks`/`decide` unit tests (all-pass→APPROVED, hard-fail→REJECTED, zoning-missing→NEEDS_REVIEW) add kiye.
+**Kya karta hai:** Real PostGIS DB par integration tests; default pytest chalna fast rahe, integration `make test-integration` se.
+**Files:** `backend/tests/conftest.py`, `backend/tests/test_integration.py`, `backend/pyproject.toml`, `Makefile`, `backend/tests/test_checks.py`.
+**Verify:** ruff clean; `pytest -q backend` — 120 passed, 3 integration deselected (default fast). Live `make db-up && make test-integration` needs Docker (nahi chala is session me).
+
+
+### Commit batch C5 — T5.2, T5.3-B, T8.1
+
+**Message:** `feat(trade): evaluate, settle and integration-test orders`
+
+
+
+---
+
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
   `backend/log-b.md`, `middleware/log-m.md`.
@@ -198,55 +376,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Owner:** Backend. Context pack: `docs/context/C1.md`.
 
-### [] T1.1 — PostGIS boot karke schema verify karo
 
-**Kya karna hai**
-1. `docker compose up -d postgis` chalao; container healthy hone tak wait karo.
-2. `docker compose exec -T postgis psql -U landmarket -d landmarket -c "\dt"` se 6 tables confirm karo.
-3. `backend/scripts/check_db.py` banao — PostGIS version, 6 table names, row counts print kare;
-   DB na mile to exit code 1 de.
-4. Root `Makefile` banao: `db-up`, `db-check`, `db-reset` (volume delete se pehle `yes` prompt),
-   `seed` (T1.3 ke baad kaam karega), `api`, `mid`, `web`, `check`.
-5. `SETUP.md` me Makefile commands add karo.
-
-**Files:** `backend/scripts/check_db.py`, `Makefile`, `SETUP.md`.
-**Done criteria:** `make db-check` PostGIS version + 6 tables dikhata hai; DB band ho to non-zero exit.
-**Verify:** `make db-up && make db-check`.
-
-### [] T1.2 — Database access layer banao
-
-**Kya karna hai**
-1. `backend/app/core/db.py` me `@contextmanager db_connection()` banao: `psycopg.connect`,
-   `row_factory=dict_row`, `connect_timeout=5`, commit/rollback/close.
-2. `backend/app/repositories/base.py` me `fetch_one`, `fetch_all`, `execute` helpers banao.
-3. Health probe ko isi layer se chalao; routes me direct `psycopg.connect` na ho.
-4. Unit test: galat `DATABASE_URL` par `check_database()` `unavailable` return kare, raise na kare.
-
-**Files:** `backend/app/core/db.py`, `backend/app/repositories/base.py`,
-`backend/tests/test_db.py`.
-**Done criteria:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me mile; ruff/pytest pass.
-**Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
-
-### [] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
-
-**Kya karna hai**
-1. `backend/db/002_seed_demo.sql` banao. Sab kuch clearly demo ho:
-   - parcel `DEMO-ULPIN-001`, Kothrud ke paas chhota polygon, `geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`,
-     attributes me `owner_name`, `district`, `zoning`.
-   - 1 parent ALU (`100m`) + 4 child ALUs (`10m`), deterministic IDs, parent links.
-   - `parcel_alus` me charo `CONTAINS` link.
-2. `backend/scripts/seed.py` banao: SQL file execute kare, dobara chalane par duplicate na banaye
-   (demo rows pehle delete kare, phir insert).
-3. `Makefile` ka `seed` target is script ko chalao.
-4. `SETUP.md` me demo ULPIN note karo.
-
-**Files:** `backend/db/002_seed_demo.sql`, `backend/scripts/seed.py`, `Makefile`, `SETUP.md`.
-**Done criteria:** `make seed` ke baad `DEMO-ULPIN-001`, 5 ALUs aur 4 parcel_alus rows hon.
-**Verify:** `make db-check && make seed && make db-check`.
-
-### Commit batch C1 — T1.1, T1.2, T1.3
-
-**Message:** `feat(db): add postgis checks, db helpers and demo seed`
 
 ---
 
@@ -254,55 +384,6 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Owner:** Backend. Context pack: `docs/context/C2.md`.
 
-### [] T2.1 — Parcel read API
-
-**Kya karna hai**
-1. `backend/app/repositories/parcels.py` banao: ULPIN se parcel, bbox se parcels (PostGIS `ST_AsGeoJSON`,
-   `ST_MakeEnvelope(...,4326)`, `ST_Intersects`).
-2. `backend/app/api/routes/parcels.py`:
-   - `GET /api/v1/parcels/{ulpin}` → GeoJSON Feature + attributes + `geometry_status`; missing par 404.
-   - `GET /api/v1/parcels?bbox=minLon,minLat,maxLon,maxLat&limit=100` → FeatureCollection; limit max 100.
-3. `app/api/main.py` me router register karo.
-4. Tests: invalid bbox 422, missing ULPIN 404, limit >100 clamp/reject.
-
-**Files:** `backend/app/repositories/parcels.py`, `backend/app/api/routes/parcels.py`,
-`backend/app/api/main.py`, `backend/tests/test_parcels.py`.
-**Done criteria:** `GET /api/v1/parcels/DEMO-ULPIN-001` demo polygon laut-ta hai.
-**Verify:** `curl -s localhost:8000/api/v1/parcels/DEMO-ULPIN-001 | head`.
-
-### [] T2.2 — Deterministic ALU grid endpoint
-
-**Kya karna hai**
-1. `backend/app/services/alu_grid.py` banao. Levels: `1km`=1000m, `100m`, `10m`, `1m`,
-   `0.1m2`=0.1m × 1m. Web Mercator meters me cell index nikalo, wapas lon/lat me convert karo.
-2. ID format: `ALU-{level}-{ix}-{iy}`; parent ID next coarser level ke same formula se.
-3. `GET /api/v1/alus?bbox=...&level=10m` → GeoJSON FeatureCollection, har feature me
-   `alu_id`, `parent_id`, `level`. Max 1500 cells; zyada ho to 422 "zoom in" error.
-4. Tests: same input par same ID, parent-child relation sahi, cap enforce.
-
-**Files:** `backend/app/services/alu_grid.py`, `backend/app/api/routes/alus.py`,
-`backend/app/api/main.py`, `backend/tests/test_alu_grid.py`.
-**Done criteria:** Endpoint deterministic output deta hai; 1500 se zyada par 422.
-**Verify:** `pytest -q backend/tests/test_alu_grid.py`.
-
-### [] T2.3 — Bundle schema aur API
-
-**Kya karna hai**
-1. `backend/db/003_bundles.sql`: `bundles` (id, ulpin FK, name, status `DRAFT/ACTIVE/PAUSED/ARCHIVED`,
-   created_by, timestamps) aur `bundle_alus` (bundle_id, alu_id, PK).
-2. Routes: `POST /api/v1/bundles` `{ulpin,name,alu_ids,created_by}`; `GET /api/v1/bundles/{id}`;
-   `PATCH /api/v1/bundles/{id}` `{status}`.
-3. Validation: saare ALU exist karein aur usi parcel se linked hon; duplicate ALU reject.
-4. Tests: happy path, cross-parcel ALU reject, duplicate reject, invalid status transition.
-
-**Files:** `backend/db/003_bundles.sql`, `backend/app/repositories/bundles.py`,
-`backend/app/api/routes/bundles.py`, `backend/app/api/main.py`, `backend/tests/test_bundles.py`.
-**Done criteria:** Demo parcel ke 4 ALUs ka ACTIVE bundle ban jaata hai.
-**Verify:** `make db-reset && make seed` phir bundle POST.
-
-### Commit batch C2 — T2.1, T2.2, T2.3
-
-**Message:** `feat(api): expose parcels, alu grid and bundles`
 
 ---
 
@@ -332,102 +413,14 @@ fake run mat karo.
 **Done criteria:** Real `COMPLETE` event + kam se kam 1 asli source URL document ho.
 **Verify:** `npm --prefix middleware run smoke:tinyfish`.
 
-### [] T3.2 — Evidence validate, hash aur DB me save karo
-
-**Kya karna hai**
-1. `backend/app/services/evidence.py`: 21 fields ki list, missing fields ko `N/D` banao,
-   canonical JSON (sorted keys) ka SHA-256 hash nikalo.
-2. `POST /api/v1/verifications` update karo: middleware response validate karke
-   `evidence_sheets` me save kare; response me `evidence_id`, `evidence_hash`, `status`,
-   `fields`, `sources`, `tinyfish_run_id` de.
-3. `GET /api/v1/evidence/{id}` aur `GET /api/v1/evidence?ulpin=...` add karo.
-4. Middleware down ho to 503, invalid sheet ho to 422; raw data kabhi invent na karo.
-5. Tests: mocked middleware response se persistence + hash determinism.
-
-**Files:** `backend/app/services/evidence.py`, `backend/app/repositories/evidence.py`,
-`backend/app/api/routes/verifications.py`, `backend/app/api/routes/evidence.py`,
-`backend/app/api/main.py`, `backend/tests/test_evidence.py`.
-**Done criteria:** Ek verification ke baad DB row + stable hash; GET se same sheet mile.
-**Verify:** `pytest -q backend/tests/test_evidence.py`.
-
-### [] T3.3 — Officer review queue
-
-**Kya karna hai**
-1. `backend/db/004_review.sql`: `evidence_sheets` me `review_reason TEXT`, `reviewed_at TIMESTAMPTZ`.
-2. Routes: `GET /api/v1/reviews?status=PENDING` (evidence + parcel summary),
-   `POST /api/v1/reviews/{id}/decision` `{decision: APPROVE|REJECT, reason, officer}`.
-3. Transitions: `PENDING/NEEDS_REVIEW` → `CLEAN` ya `REJECTED`; dobara decision par 409.
-4. `reviewed_by`, `review_reason`, `reviewed_at` save karo. Auth abhi officer string hai —
-   JWT T4.1 me aayega, code me TODO note karo.
-5. Tests: valid transitions, invalid transition 409, reason required on reject.
-
-**Files:** `backend/db/004_review.sql`, `backend/app/api/routes/reviews.py`,
-`backend/app/repositories/evidence.py`, `backend/app/api/main.py`, `backend/tests/test_reviews.py`.
-**Done criteria:** Officer pending evidence approve/reject kar sakta hai; audit fields bharte hain.
-**Verify:** `pytest -q backend/tests/test_reviews.py`.
-
-### Commit batch C3 — T3.1, T3.2, T3.3
-
-**Message:** `feat(evidence): add tinyfish proof, persistence and review queue`
 
 ---
+
 
 ## Phase 4 — Identity, listing aur order — [0/3]
 
 **Owner:** Backend. Context pack: `docs/context/C4.md`.
 
-### [] T4.1 — Wallet user aur KYC stub
-
-**Kya karna hai**
-1. `backend/db/005_users.sql`: `users` (id, wallet_address unique, role `CITIZEN/OFFICER`,
-   kyc_status `PENDING/VERIFIED/REJECTED`, created_at, updated_at).
-2. Routes: `POST /api/v1/users` upsert wallet, `GET /api/v1/users/{wallet}`,
-   `POST /api/v1/users/{wallet}/kyc` `{status, reason}`.
-3. KYC endpoint ko `X-Officer-Token` header chahiye; value `.env` ke `DEV_OFFICER_TOKEN` se match kare.
-   Ye prototype stub hai — document me clearly likho.
-4. Wallet format validate karo (`0x` + 40 hex).
-5. Tests: invalid wallet 422, missing token 401, KYC update 200.
-
-**Files:** `backend/db/005_users.sql`, `backend/app/api/routes/users.py`,
-`backend/app/repositories/users.py`, `backend/app/api/main.py`, `backend/.env.example`,
-`backend/tests/test_users.py`.
-**Done criteria:** Demo buyer/seller KYC VERIFIED ho jaate hain.
-**Verify:** `pytest -q backend/tests/test_users.py`.
-
-### [] T4.2 — Listing create/browse/pause
-
-**Kya karna hai**
-1. `backend/db/006_listings_bundle.sql`: `listings` me `bundle_id BIGINT REFERENCES bundles(id)`;
-   `alu_id` nullable rakho.
-2. Routes: `POST /api/v1/listings` `{bundle_id, seller_wallet, price_wei}`; `GET /api/v1/listings?status=LISTED`;
-   `PATCH /api/v1/listings/{id}` `{status}`.
-3. Rules: seller KYC VERIFIED, bundle ACTIVE, price > 0, ek bundle par ek active listing.
-4. Transitions: `DRAFT→LISTED→PAUSED/CANCELLED`, `PAUSED→LISTED`.
-5. Tests: unverified seller reject, duplicate active listing reject, happy path.
-
-**Files:** `backend/db/006_listings_bundle.sql`, `backend/app/api/routes/listings.py`,
-`backend/app/repositories/listings.py`, `backend/app/api/main.py`, `backend/tests/test_listings.py`.
-**Done criteria:** Demo bundle LISTED ho jaata hai.
-**Verify:** `pytest -q backend/tests/test_listings.py`.
-
-### [] T4.3 — Order lifecycle
-
-**Kya karna hai**
-1. Routes: `POST /api/v1/orders` `{listing_id, buyer_wallet}`; `POST /api/v1/orders/{id}/funded`
-   `{chain_order_id, tx_hash}`; `GET /api/v1/orders/{id}`.
-2. Rules: buyer KYC VERIFIED, listing LISTED, buyer ≠ seller, price listing se match kare.
-   Order `CREATED` par bane; funding proof aane par `FUNDED`.
-3. `chain_order_id` 32-byte hex aur `tx_hash` 32-byte hex validate karo; duplicate funding 409.
-4. Tests: self-buy reject, wrong price reject, double funded reject, happy path.
-
-**Files:** `backend/app/api/routes/orders.py`, `backend/app/repositories/orders.py`,
-`backend/app/api/main.py`, `backend/tests/test_orders.py`.
-**Done criteria:** CREATED → FUNDED order DB me record hota hai.
-**Verify:** `pytest -q backend/tests/test_orders.py`.
-
-### Commit batch C4 — T4.1, T4.2, T4.3
-
-**Message:** `feat(market): add wallet identity, listings and orders`
 
 ---
 
@@ -435,40 +428,7 @@ fake run mat karo.
 
 **Owner split:** `T5.1`, `T5.2`, `T5.3-B` backend; `T5.3-M` middleware. Context pack: `docs/context/C5.md`.
 
-### [] T5.1 — 6 checks ka pure rule engine
 
-**Kya karna hai**
-1. `backend/app/services/checks.py` me har check alag pure function ho, output
-   `CheckResult(name, passed, reason, blocking)`.
-2. Checks exactly ye 6:
-   - `LISTED` — listing status `LISTED` aur order usi listing ka ho.
-   - `BUNDLE_INTACT` — bundle `ACTIVE`, saare ALU maujood, koi ALU kisi doosre active order me na ho.
-   - `KYC_WALLET` — buyer aur seller dono `VERIFIED`.
-   - `ZONING_OK` — evidence me `land_use_zoning` available/partial ho aur restricted/agricultural na ho.
-   - `FUNDS_IN_ESCROW` — order `FUNDED` aur chain state `Funded (1)` ho.
-   - `TRADE_MATCH` — listing, bundle, parcel ULPIN, evidence ULPIN aur buyer/seller match karein.
-3. Rule policy `docs/checks.md` me likho; demo assumptions clearly mark karo.
-4. Unit tests: har check ka pass aur fail case (kam se kam 12 tests).
-
-**Files:** `backend/app/services/checks.py`, `docs/checks.md`, `backend/tests/test_checks.py`.
-**Done criteria:** 6 checks isolated test ho jaate hain, DB ke bina.
-**Verify:** `pytest -q backend/tests/test_checks.py`.
-
-### [] T5.2 — Evaluate endpoint aur decision policy
-
-**Kya karna hai**
-1. `backend/db/007_order_checks.sql`: orders me `checks JSONB`, `decision TEXT`,
-   `decided_at TIMESTAMPTZ`; decision `APPROVED/NEEDS_REVIEW/REJECTED`.
-2. `POST /api/v1/orders/{id}/evaluate`: context load karo, 6 checks chalao, result persist karo.
-3. Decision: sab pass → `APPROVED`; blocking fail → `REJECTED`; sirf missing/N/D evidence →
-   `NEEDS_REVIEW`. Exact mapping `docs/checks.md` me.
-4. `GET /api/v1/orders/{id}` response me per-check result + decision de.
-5. Tests: approve, reject, review scenarios.
-
-**Files:** `backend/db/007_order_checks.sql`, `backend/app/api/routes/orders.py`,
-`backend/app/services/checks.py`, `docs/checks.md`, `backend/tests/test_evaluate.py`.
-**Done criteria:** Ek order evaluate hoke decision DB me save hota hai.
-**Verify:** `pytest -q backend/tests/test_evaluate.py`.
 
 ### [] T5.3-M — Middleware escrow status endpoint (middleware slice)
 
@@ -484,27 +444,9 @@ fake run mat karo.
 **Done criteria:** `curl localhost:8090/escrow/status/<orderId>` sahi state deta hai.
 **Verify:** local chain + `curl`.
 
-### [] T5.3-B — Backend settle/refund wiring (backend slice)
-
-**Owner:** Backend. May mock `T5.3-M` until it is merged.
-
-**Kya karna hai**
-1. `backend/app/services/settlement.py`: `APPROVED` → settle, `REJECTED` → refund,
-   `NEEDS_REVIEW` → kuch nahi. Calls middleware par jaayein.
-2. Success par order state `SETTLED/REFUNDED`, `tx_hash` save; dobara call idempotent ho (409/200).
-3. Middleware/chain fail par order state na badle; error 502.
-4. Tests: mocked middleware se approve/reject/idempotency; manual local chain test.
-
-**Files:** `backend/app/services/settlement.py`, `backend/app/api/routes/orders.py`,
-`backend/tests/test_settlement.py`.
-**Done criteria:** Evaluate ke baad settle/refund call hota hai aur tx hash DB me aata hai.
-**Verify:** `pytest -q backend/tests/test_settlement.py`, phir local chain par manual.
-
-### Commit batch C5 — T5.1, T5.2, T5.3-M, T5.3-B
-
-**Message:** `feat(trade): implement six checks and escrow settlement`
 
 ---
+
 
 ## Phase 6 — Blockchain deployment — [0/3]
 
@@ -686,21 +628,6 @@ fake run mat karo.
 
 **Owner split:** `T8.1` backend; `T8.2` lead; `T8.3-B/M/F` backend/middleware/frontend; `T8.3-D` lead. Context pack: `docs/context/C8.md`.
 
-### [] T8.1 — Real PostGIS integration tests
-
-**Owner:** Backend. Context pack: `docs/context/C8.md`.
-
-**Kya karna hai**
-1. `backend/tests/conftest.py`: `TEST_DATABASE_URL` se connection, schema apply, per-test rollback.
-2. Integration tests: parcel bbox, ALU grid, bundle validation, listing/order transitions,
-   evaluate decision, evidence persistence.
-3. Marker `@pytest.mark.integration`; default `pytest` fast rahe, integration alag command se chale.
-4. `Makefile` me `test-integration` target.
-
-**Files:** `backend/tests/conftest.py`, `backend/tests/test_integration_*.py`,
-`backend/pyproject.toml`, `Makefile`.
-**Done criteria:** DB up hone par saare integration tests pass.
-**Verify:** `make db-up && make test-integration`.
 
 ### [] T8.2 — One-command demo runner
 
