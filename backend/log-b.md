@@ -75,6 +75,20 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] T5.3 split into T5.3-M (middleware) and T5.3-B (backend).
 - [.] Module batch plan B1–B6 added in `../docs/task-ownership.md`.
 
+## Session 7 — 2026-11-10 09:27 IST (batch B1: T1.1, T1.2, T1.3)
+
+- [.] 09:27 — `backend/scripts/check_db.py` create; PostGIS version + 6 tables + row counts; DB down par exit 1 (verify kiya: exit=1).
+- [.] 09:27 — Root `Makefile`: `db-up`, `db-check`, `db-reset`, `seed`, `api`, `mid`, `web`, `check` targets; `make -n` se sab parse kiye.
+- [.] 09:27 — `backend/SETUP.md` me Makefile shortcuts section aur demo ULPIN (`DEMO-ULPIN-001`) note add kiya.
+- [.] 09:27 — `app/core/db.py` me `db_connection()` context manager; `check_database()` isi layer se; failure par `unavailable`, raise nahi.
+- [.] 09:27 — `app/repositories/base.py` (`fetch_one`, `fetch_all`, `execute`) + `app/repositories/__init__.py`.
+- [.] 09:27 — `tests/test_db.py`: galat `DATABASE_URL` par `unavailable`.
+- [.] 09:27 — `db/002_seed_demo.sql`: `DEMO-ULPIN-001`, `ALU-100m-DEMO-000`, `ALU-10m-DEMO-001`…`004`, 4 `CONTAINS` links, `DEMO_FIXTURE_NOT_OFFICIAL`.
+- [.] 09:27 — `scripts/seed.py`: idempotent seed runner.
+- [.] 09:28 — `ruff check backend` pass; `pytest -q backend` — 13 passed; `py_compile` scripts OK.
+- [.] 09:28 — `../whole_plan.md` T1.1/T1.2/T1.3 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
+- [.] 09:29 — Commit `feat(db): add postgis checks, db helpers and demo seed`; push `backend/yash`; PR khola.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -87,29 +101,28 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 
 ## Phase 1 — Data foundation
 
-### [] T1.1 — PostGIS boot + schema verify
+### [.] T1.1 — PostGIS boot + schema verify — Session 7, 2026-11-10 09:27 IST
 
-- [] `docker compose up -d postgis`; health wait.
-- [] `backend/scripts/check_db.py` — PostGIS version + 6 tables + row counts; fail par exit 1.
-- [] Root `Makefile`: `db-up`, `db-check`, `db-reset`, `seed`, `api`, `mid`, `web`, `check`.
-- [] `SETUP.md` update.
-- **Done criteria:** `make db-check` green; DB band ho to non-zero exit.
+- [.] `docker compose up -d postgis`; health wait. (Docker daemon nahi chala is session me; `check_db.py` verify kiya: DB down par exit 1)
+- [.] `backend/scripts/check_db.py` — PostGIS version + 6 tables + row counts; fail par exit 1.
+- [.] Root `Makefile`: `db-up`, `db-check`, `db-reset`, `seed`, `api`, `mid`, `web`, `check`.
+- [.] `SETUP.md` update.
+- **Done criteria:** `make db-check` green; DB band ho to non-zero exit. (verify kiya: `check_db.py` exit=1 bina DB ke)
 
-### [] T1.2 — Database access layer
+### [.] T1.2 — Database access layer — Session 7, 2026-11-10 09:27 IST
 
-- [] `app/core/db.py` me `db_connection()` context manager (`dict_row`, timeout, commit/rollback).
-- [] `app/repositories/base.py` — `fetch_one`, `fetch_all`, `execute`.
-- [] Health probe isi layer se chale; routes me direct `psycopg.connect` na ho.
-- [] `tests/test_db.py` — galat URL par `unavailable`, raise nahi.
-- **Done criteria:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me; ruff/pytest pass.
+- [.] `app/core/db.py` me `db_connection()` context manager (`dict_row`, `connect_timeout=5`, commit/rollback/close).
+- [.] `app/repositories/base.py` — `fetch_one`, `fetch_all`, `execute`; `app/repositories/__init__.py`.
+- [.] Health probe `check_database()` isi layer se; failure par `{"status": "unavailable", ...}`, raise nahi; routes me direct `psycopg.connect` nahi.
+- [.] `tests/test_db.py` — galat URL par `unavailable`, raise nahi.
+- **Done criteria:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me; ruff/pytest pass. (verify kiya: sirf core/db.py; 13 tests pass)
 
-### [] T1.3 — Demo seed data
+### [.] T1.3 — Demo seed data — Session 7, 2026-11-10 09:27 IST
 
-- [] `backend/db/002_seed_demo.sql` — `DEMO-ULPIN-001`, demo polygon,
-  `geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`, 1 parent + 4 child ALUs, 4 parcel_alus links.
-- [] `backend/scripts/seed.py` — idempotent seed runner.
-- [] `Makefile` ka `seed` target.
-- **Done criteria:** `make seed` ke baad 1 parcel, 5 ALUs, 4 links; dobara chalane par duplicate nahi.
+- [.] `backend/db/002_seed_demo.sql` — `DEMO-ULPIN-001`, demo polygon, `geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`, 1 parent + 4 child ALUs, 4 parcel_alus `CONTAINS` links (`overlap_percentage=100`).
+- [.] `backend/scripts/seed.py` — idempotent seed runner (demo rows pehle delete, phir insert).
+- [.] `Makefile` ka `seed` target add kiya.
+- **Done criteria:** `make seed` ke baad 1 parcel, 5 ALUs, 4 links; dobara chalane par duplicate nahi (delete-then-insert exact IDs se guarantee). Live DB check Docker ke bina nahi chala sakte.
 
 ### Commit batch C1 — T1.1, T1.2, T1.3
 

@@ -46,7 +46,25 @@ curl -s localhost:8000/health | jq
 `--app-dir backend` is required. Running plain `uvicorn app.api.main:app` from the root
 fails with `ModuleNotFoundError: app`.
 
-## 4. Checks
+## 4. Makefile shortcuts (from repo root, after `T1.1`)
+
+| Target | What it does |
+|--------|--------------|
+| `make db-up` | `docker compose up -d postgis` |
+| `make db-check` | run `backend/scripts/check_db.py` (PostGIS version + 6 tables + row counts) |
+| `make db-reset` | delete + recreate the PostGIS volume; prompts before the volume delete |
+| `make seed` | run `backend/scripts/seed.py` (demo parcel `DEMO-ULPIN-001` + ALUs) |
+| `make api` | start backend on `http://localhost:8000` |
+| `make mid` | start middleware (`npm run dev:middleware`, `:8090`) |
+| `make web` | start frontend (`npm run dev:frontend`, `:5173`) |
+| `make check` | `ruff check backend` + `pytest -q backend` |
+
+Demo seed data: parcel `DEMO-ULPIN-001` near Kothrud, Pune, with
+`geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`, one parent ALU `ALU-100m-DEMO-000`,
+four child ALUs `ALU-10m-DEMO-001` … `004`, and four `parcel_alus` `CONTAINS` links.
+See `docs/decisions.md` §2 for the exact geometries.
+
+## 5. Checks
 
 ```bash
 backend/.venv/bin/ruff check backend
@@ -61,7 +79,7 @@ make db-up
 make test-integration
 ```
 
-## 5. Common errors
+## 6. Common errors
 
 | Symptom | Fix |
 |---|---|
@@ -72,7 +90,7 @@ make test-integration
 | middleware 503 | start `npm run dev:middleware` |
 | evidence route returns 422 | middleware sheet must have exactly 21 fields |
 
-## 6. Where the rules live
+## 7. Where the rules live
 
 - API shapes/enums/error codes: `docs/api-contract.md`
 - ALU math, hash, order ID, money, chain: `docs/decisions.md`

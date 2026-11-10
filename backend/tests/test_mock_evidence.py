@@ -4,8 +4,6 @@ import hashlib
 import json
 from typing import Any
 
-import pytest
-
 EVIDENCE_FIELDS = [
     "ulpin", "cadastral_map", "satellite_imagery", "record_of_rights",
     "registration_deeds", "master_plan", "building_permissions",
@@ -51,12 +49,28 @@ class TestEvidenceNormalization:
             assert result[key] == nd_field(), f"field {key} should be N/D"
 
     def test_extra_fields_are_dropped(self) -> None:
-        result = normalize_sheet({"fake_field": {"value": "x", "status": "AVAILABLE", "source": "s", "retrieved_at": "t"}})
+        result = normalize_sheet(
+            {
+                "fake_field": {
+                    "value": "x",
+                    "status": "AVAILABLE",
+                    "source": "s",
+                    "retrieved_at": "t",
+                }
+            }
+        )
         assert len(result) == 21
         assert "fake_field" not in result
 
     def test_partial_fields_kept(self) -> None:
-        input_fields = {"ulpin": {"value": "DEMO-ULPIN-001", "status": "AVAILABLE", "source": "https://example.gov", "retrieved_at": "2026-10-29T16:40:00Z"}}
+        input_fields = {
+            "ulpin": {
+                "value": "DEMO-ULPIN-001",
+                "status": "AVAILABLE",
+                "source": "https://example.gov",
+                "retrieved_at": "2026-10-29T16:40:00Z",
+            }
+        }
         result = normalize_sheet(input_fields)
         assert result["ulpin"]["value"] == "DEMO-ULPIN-001"
         assert result["ulpin"]["status"] == "AVAILABLE"
@@ -66,7 +80,10 @@ class TestEvidenceNormalization:
                 assert result[key] == nd_field(), f"field {key} should be N/D"
 
     def test_all_21_fields_present(self) -> None:
-        full_input = {key: {"value": "v", "status": "AVAILABLE", "source": "s", "retrieved_at": "t"} for key in EVIDENCE_FIELDS}
+        full_input = {
+            key: {"value": "v", "status": "AVAILABLE", "source": "s", "retrieved_at": "t"}
+            for key in EVIDENCE_FIELDS
+        }
         result = normalize_sheet(full_input)
         assert len(result) == 21
         for key in EVIDENCE_FIELDS:
