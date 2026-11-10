@@ -180,6 +180,37 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `git log --oneline -1` shows `729e9eb`; `git status --short` is clean.
 
+### [.] T1.1 — PostGIS boot karke schema verify karo
+
+**Done:** 2026-11-10 09:27 IST — Session 7
+
+**Kya hua:** `backend/scripts/check_db.py` banaya — PostGIS version, 6 table names, row counts print karta hai; DB na mile to exit code 1 deta hai. Root `Makefile` banaya: `db-up`, `db-check`, `db-reset` (volume delete se pehle prompt), `seed`, `api`, `mid`, `web`, `check`. `backend/SETUP.md` me Makefile shortcuts aur demo ULPIN note add kiya.
+**Kya karta hai:** DB health check failure par exit 1 deta hai (fail closed); repo root se service start/check shortcuts ready.
+**Files:** `backend/scripts/check_db.py`, `Makefile`, `backend/SETUP.md`.
+**Verify:** `ruff check backend` + `pytest -q backend` pass (13 passed); `check_db.py` exit code 1 jab DB down ho (verify kiya). Live `make db-up && make db-check` ke liye Docker chahiye, jo is session me nahi chala.
+
+### [.] T1.2 — Database access layer banao
+
+**Done:** 2026-11-10 09:27 IST — Session 7
+
+**Kya hua:** `app/core/db.py` me `@contextmanager db_connection()` banaya (`dict_row`, `connect_timeout=5`, commit/rollback/close). `check_database()` ab isi layer par chalta hai; failure par `{"status": "unavailable", ...}` return karta hai, raise nahi. `app/repositories/base.py` me `fetch_one`, `fetch_all`, `execute` banaye. Health route `check_database` se chale; routes me koi direct `psycopg.connect` nahi. `tests/test_db.py`: galat URL par `unavailable`, raise nahi.
+**Kya karta hai:** Pure API ke liye ek DB access point.
+**Files:** `backend/app/core/db.py`, `backend/app/repositories/__init__.py`, `backend/app/repositories/base.py`, `backend/tests/test_db.py`.
+**Verify:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me; ruff + pytest pass.
+
+### [.] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
+
+**Done:** 2026-11-10 09:27 IST — Session 7
+
+**Kya hua:** `db/002_seed_demo.sql` banaya: parcel `DEMO-ULPIN-001`, `geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`, attributes `{"owner_name": "Demo Owner", "district": "Pune", "zoning": "Residential"}`; parent `ALU-100m-DEMO-000`; children `ALU-10m-DEMO-001`…`004` parent-linked; 4 `parcel_alus` `CONTAINS`, `overlap_percentage=100`. `scripts/seed.py` banaya (idempotent: demo rows pehle delete, phir insert). `Makefile` ka `seed` target add kiya; `SETUP.md` me demo ULPIN note add kiya.
+**Kya karta hai:** Demo parcel + 5 ALUs + 4 links; dobara chalane par duplicate nahi.
+**Files:** `backend/db/002_seed_demo.sql`, `backend/scripts/seed.py`, `Makefile`, `backend/SETUP.md`.
+**Verify:** `make seed` ke baad 1 parcel, 5 ALUs, 4 links; idempotency delete-then-insert exact IDs se guarantee hai. Live `make db-check && make seed && make db-check` ke liye Docker chahiye, jo is session me nahi chala.
+
+### Commit batch C1 — T1.1, T1.2, T1.3
+
+**Message:** `feat(db): add postgis checks, db helpers and demo seed`
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -202,55 +233,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Owner:** Backend. Context pack: `docs/context/C1.md`.
 
-### [] T1.1 — PostGIS boot karke schema verify karo
 
-**Kya karna hai**
-1. `docker compose up -d postgis` chalao; container healthy hone tak wait karo.
-2. `docker compose exec -T postgis psql -U landmarket -d landmarket -c "\dt"` se 6 tables confirm karo.
-3. `backend/scripts/check_db.py` banao — PostGIS version, 6 table names, row counts print kare;
-   DB na mile to exit code 1 de.
-4. Root `Makefile` banao: `db-up`, `db-check`, `db-reset` (volume delete se pehle `yes` prompt),
-   `seed` (T1.3 ke baad kaam karega), `api`, `mid`, `web`, `check`.
-5. `SETUP.md` me Makefile commands add karo.
-
-**Files:** `backend/scripts/check_db.py`, `Makefile`, `SETUP.md`.
-**Done criteria:** `make db-check` PostGIS version + 6 tables dikhata hai; DB band ho to non-zero exit.
-**Verify:** `make db-up && make db-check`.
-
-### [] T1.2 — Database access layer banao
-
-**Kya karna hai**
-1. `backend/app/core/db.py` me `@contextmanager db_connection()` banao: `psycopg.connect`,
-   `row_factory=dict_row`, `connect_timeout=5`, commit/rollback/close.
-2. `backend/app/repositories/base.py` me `fetch_one`, `fetch_all`, `execute` helpers banao.
-3. Health probe ko isi layer se chalao; routes me direct `psycopg.connect` na ho.
-4. Unit test: galat `DATABASE_URL` par `check_database()` `unavailable` return kare, raise na kare.
-
-**Files:** `backend/app/core/db.py`, `backend/app/repositories/base.py`,
-`backend/tests/test_db.py`.
-**Done criteria:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me mile; ruff/pytest pass.
-**Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
-
-### [] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
-
-**Kya karna hai**
-1. `backend/db/002_seed_demo.sql` banao. Sab kuch clearly demo ho:
-   - parcel `DEMO-ULPIN-001`, Kothrud ke paas chhota polygon, `geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`,
-     attributes me `owner_name`, `district`, `zoning`.
-   - 1 parent ALU (`100m`) + 4 child ALUs (`10m`), deterministic IDs, parent links.
-   - `parcel_alus` me charo `CONTAINS` link.
-2. `backend/scripts/seed.py` banao: SQL file execute kare, dobara chalane par duplicate na banaye
-   (demo rows pehle delete kare, phir insert).
-3. `Makefile` ka `seed` target is script ko chalao.
-4. `SETUP.md` me demo ULPIN note karo.
-
-**Files:** `backend/db/002_seed_demo.sql`, `backend/scripts/seed.py`, `Makefile`, `SETUP.md`.
-**Done criteria:** `make seed` ke baad `DEMO-ULPIN-001`, 5 ALUs aur 4 parcel_alus rows hon.
-**Verify:** `make db-check && make seed && make db-check`.
-
-### Commit batch C1 — T1.1, T1.2, T1.3
-
-**Message:** `feat(db): add postgis checks, db helpers and demo seed`
 
 ---
 
