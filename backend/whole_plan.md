@@ -374,6 +374,23 @@ GET found/missing, PATCH happy) via mocked repo; live DB needs Docker.
 **Verify:** ruff clean; `pytest -q backend` pass.
 
 
+### Commit batch C6 — T8.3-B, T9.1
+
+**Message:** `chore(backend): harden and add alu locking`
+
+### [.] T9.3-B — Backend production container (backend slice)
+
+**Done:** 2026-11-10 20:00 IST — Session 13
+
+**Kya hua:** `backend/Dockerfile` banaya — multi-stage build (python:3.12-slim builder venv + slim runtime), non-root `appuser`, `backend/app` copied, `EXPOSE 8000`, healthcheck on `/health`, CMD `uvicorn app.api.main:app --app-dir backend --host 0.0.0.0 --port 8000`. `pip install -r requirements-dev.txt` in builder so `pycryptodome` (chain keccak) is available.
+
+**Kya karta hai:** Production-ready backend container serving the FastAPI API on :8000.
+
+**Files:** `backend/Dockerfile`.
+
+**Verify:** `docker build -t land-market-backend -f backend/Dockerfile backend` (Docker not reachable in this session; Dockerfile syntax reviewed).
+
+
 
 ---
 
@@ -714,9 +731,6 @@ source conflict par `NEEDS_REVIEW`, confidence score evidence sheet me.
 AI tests; backend contract change only via lead.
 **Done criteria:** Kam se kam 2 portals ka merged sheet + conflicts review me jaate hain.
 
-### [] T9.3-B — Backend production container (backend slice)
-
-**Owner:** Backend. `backend/Dockerfile`.
 
 ### [] T9.3-M — Middleware production container (middleware slice)
 
