@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import alus, bundles, health, parcels, verifications
+from app.api.routes import alus, bundles, evidence, health, parcels, reviews, users, verifications
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -24,4 +24,7 @@ app.include_router(health.router)
 app.include_router(parcels.router, prefix=settings.api_prefix)
 app.include_router(alus.router, prefix=settings.api_prefix)
 app.include_router(bundles.router, prefix=settings.api_prefix)
+app.include_router(evidence.router, prefix=settings.api_prefix)
+app.include_router(reviews.router, prefix=settings.api_prefix)
+app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(verifications.router, prefix=settings.api_prefix)

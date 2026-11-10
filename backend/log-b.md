@@ -99,6 +99,16 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 11:31 — `../whole_plan.md` T2.1/T2.2/T2.3 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
 - [.] 11:32 — Commit `feat(api): expose parcels, alu grid and bundles`; push `backend/yash`; PR khola.
 
+## Session 9 — 2026-11-10 14:00 IST (batch B3: T3.2, T3.3, T4.1)
+
+- [.] 14:00 — `app/services/evidence.py` (EVIDENCE_FIELDS 21 keys, normalize_sheet, canonical_hash); `app/api/routes/verifications.py` (camelCase sourceUrl, 503/422/502, evidence_sheets persist, hash); `app/api/routes/evidence.py` (GET /{id}, GET ?ulpin); `app/repositories/evidence.py` (create/get/list); routers registered in app/api/main.py.
+- [.] 14:00 — `db/004_review.sql` (review_reason, reviewed_at); `app/repositories/evidence.py` (list_reviews, decide_review APPROVE→CLEAN/REJECT→REJECTED, 409 repeat, 422 no-reason); `app/api/routes/reviews.py` (GET /reviews, POST /{id}/decision with X-Officer-Token 401); router registered in app/api/main.py.
+- [.] 14:00 — `db/005_users.sql` (users table); `app/repositories/users.py` (is_valid_wallet 0x+40hex, upsert_user, get_user, update_kyc); `app/api/routes/users.py` (POST /users upsert, GET /users/{wallet}, POST /users/{wallet}/kyc with DEV_OFFICER_TOKEN); `app/core/config.py` dev_officer_token; `.env.example`/`.env` DEV_OFFICER_TOKEN; router registered in app/api/main.py.
+- [.] 14:00 — Tests: test_evidence.py, test_reviews.py, test_users.py.
+- [.] 14:05 — `ruff check backend` clean; `pytest -q backend` — 66 passed.
+- [.] 14:05 — `../whole_plan.md` T3.2/T3.3/T4.1 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
+- [.] 14:06 — Commit `feat(evidence): persist evidence, review queue and wallet users`; push `backend/yash`; PR khola.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -172,34 +182,37 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 
 ## Phase 3 — Evidence pipeline (backend slice: T3.2, T3.3)
 
-### [] T3.2 — Evidence validate, hash, DB save
+### [.] T3.2 — Evidence validate, hash, DB save — Session 9, 2026-11-10 14:00 IST
 
-- [] `app/services/evidence.py` — 21 fields, missing → `N/D`, canonical JSON SHA-256.
-- [] Verification route response me `evidence_id`, `evidence_hash`, `status`, `fields`, `sources`.
-- [] `GET /api/v1/evidence/{id}`, `GET /api/v1/evidence?ulpin=`.
-- [] Middleware down 503, invalid sheet 422.
-- [] Tests: mocked middleware, hash determinism.
+- [.] `app/services/evidence.py` — EVIDENCE_FIELDS (21 keys), normalize_sheet (missing/invalid → N/D), canonical_hash (0x + sha256 canonical JSON).
+- [.] `POST /api/v1/verifications` — middleware ko camelCase `sourceUrl` bhejta hai; middleware down 503, invalid sheet 422, other error 502; `evidence_sheets` me save; return `{ulpin,status,evidence_id,evidence_hash,tinyfish_run_id,fields,sources}`.
+- [.] `GET /api/v1/evidence/{id}`, `GET /api/v1/evidence?ulpin=`.
+- [.] `app/repositories/evidence.py` — create_evidence_sheet, get_evidence_sheet, list_evidence_sheets.
+- [.] Tests: `test_evidence.py` (normalize, hash determinism, happy path, 503, 422, 502, blank ulpin).
+- **Done criteria:** ruff clean, pytest pass; mocked middleware persistence + hash determinism.
 
-### [] T3.3 — Officer review queue
+### [.] T3.3 — Officer review queue — Session 9, 2026-11-10 14:00 IST
 
-- [] `db/004_review.sql` — `review_reason`, `reviewed_at`.
-- [] `GET /api/v1/reviews?status=PENDING`, `POST /api/v1/reviews/{id}/decision`.
-- [] Transitions `PENDING/NEEDS_REVIEW → CLEAN/REJECTED`; duplicate 409.
-- [] Audit fields save; auth TODO for T4.1.
-- [] Tests: transitions, 409, reject reason required.
+- [.] `db/004_review.sql` — `review_reason TEXT`, `reviewed_at TIMESTAMPTZ` (IF NOT EXISTS).
+- [.] `app/repositories/evidence.py` — list_reviews, decide_review (APPROVE→CLEAN, REJECT→REJECTED; PENDING/NEEDS_REVIEW se hi; repeat → 409; reject bina reason → 422).
+- [.] `app/api/routes/reviews.py` — GET /reviews?status=, POST /reviews/{id}/decision with X-Officer-Token (401 missing/wrong); reviewed_by/review_reason/reviewed_at save.
+- [.] Tests: `test_reviews.py` (pending items, approve, reject, 401, 422, 409, 404).
+- **Done criteria:** ruff clean, pytest pass.
 
-### Commit batch C3 — backend slice T3.2, T3.3
+### Commit batch C3 — T3.2, T3.3, T4.1 — Session 9, 2026-11-10 14:00 IST
 
-**Message:** `feat(evidence): add tinyfish proof, persistence and review queue`
+**Message:** `feat(evidence): persist evidence, review queue and wallet users`
 
 ## Phase 4 — Identity, listing, order
 
-### [] T4.1 — Wallet user + KYC stub
+### [.] T4.1 — Wallet user + KYC stub — Session 9, 2026-11-10 14:00 IST
 
-- [] `db/005_users.sql` — wallet, role, kyc_status.
-- [] Routes: upsert user, get user, KYC update with `X-Officer-Token`.
-- [] Wallet `0x` + 40 hex validation.
-- [] Tests: 422/401/200.
+- [.] `db/005_users.sql` — users (wallet_address UNIQUE, role CITIZEN/OFFICER, kyc_status PENDING/VERIFIED/REJECTED).
+- [.] `app/repositories/users.py` — is_valid_wallet (`^0x[a-fA-F0-9]{40}$`), upsert_user, get_user, update_kyc.
+- [.] `app/api/routes/users.py` — POST /users upsert (200), GET /users/{wallet} (404/422), POST /users/{wallet}/kyc (X-Officer-Token vs DEV_OFFICER_TOKEN → 401/402/409, KYC update 200).
+- [.] `app/core/config.py` — `dev_officer_token` field; `.env.example` aur `.env` me DEV_OFFICER_TOKEN add kiya.
+- [.] Tests: `test_users.py` (invalid wallet 422, upsert, get found/missing, 401, KYC 200).
+- **Done criteria:** ruff clean, pytest pass.
 
 ### [] T4.2 — Listing lifecycle
 

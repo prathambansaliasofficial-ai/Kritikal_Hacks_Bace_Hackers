@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     )
     middleware_url: str = "http://127.0.0.1:8090"
     middleware_timeout_seconds: float = 90.0
+    dev_officer_token: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
