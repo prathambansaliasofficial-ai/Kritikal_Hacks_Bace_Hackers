@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -55,13 +56,51 @@ def get_order(order_id: int) -> dict[str, Any] | None:
         fetch_one(
             """
             SELECT id, listing_id, buyer_wallet, seller_wallet, amount_wei, state,
-                   chain_order, tx_hash, evidence_hash, created_at, updated_at
+                   chain_order, tx_hash, evidence_hash, checks, decision,
+                   decided_at, created_at, updated_at
             FROM orders
             WHERE id = %s
             """,
             (order_id,),
         )
     )
+
+
+def save_evaluate(
+    order_id: int, checks: list[dict], decision: str
+) -> bool:
+    row = fetch_one(
+        """
+        UPDATE orders
+        SET checks = %s::jsonb, decision = %s, decided_at = now(), updated_at = now()
+        WHERE id = %s
+        RETURNING id
+        """,
+        (json.dumps(checks), decision, order_id),
+    )
+    return row is not None
+
+
+def alu_in_other_active_order(
+    alu_ids: list[str], order_id: int
+) -> bool:
+    """True iff any bundle ALU is referenced by another non-terminal order."""
+    if not alu_ids:
+        return False
+    row = fetch_one(
+        """
+        SELECT 1
+        FROM orders o
+        JOIN listings l ON l.id = o.listing_id
+        JOIN parcel_alus pa ON pa.ulpin = l.ulpin
+        WHERE o.state IN ('CREATED', 'FUNDED')
+          AND o.id <> %s
+          AND pa.alu_id = ANY(%s)
+        LIMIT 1
+        """,
+        (order_id, list(alu_ids)),
+    )
+    return row is not None
 
 
 def create_order(listing_id: int, buyer_wallet: str) -> dict[str, Any]:

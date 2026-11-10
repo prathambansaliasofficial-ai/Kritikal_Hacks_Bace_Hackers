@@ -37,3 +37,6 @@ web:
 check:
 	backend/.venv/bin/ruff check backend
 	backend/.venv/bin/pytest -q backend
+
+test-integration:
+	backend/.venv/bin/pytest -m integration -q backend -o addopts=""

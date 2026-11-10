@@ -112,6 +112,14 @@ def get_bundle(bundle_id: int) -> dict[str, Any] | None:
     return bundle
 
 
+def get_bundle_alu_ids(bundle_id: int) -> list[str]:
+    rows = fetch_all(
+        "SELECT alu_id FROM bundle_alus WHERE bundle_id = %s ORDER BY alu_id",
+        (bundle_id,),
+    )
+    return [row["alu_id"] for row in rows]
+
+
 def set_bundle_status(bundle_id: int, status: str) -> dict[str, Any] | None:
     row = fetch_one(
         "SELECT status FROM bundles WHERE id = %s", (bundle_id,)

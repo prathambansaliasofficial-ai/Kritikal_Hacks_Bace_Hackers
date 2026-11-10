@@ -148,3 +148,56 @@ def test_all_check_names_covered() -> None:
         "FUNDS_IN_ESCROW",
         "TRADE_MATCH",
     }
+
+
+def _base_context() -> dict:
+    return {
+        "listing_status": "LISTED",
+        "order_listing_id": 3,
+        "listing_id": 3,
+        "bundle_status": "ACTIVE",
+        "alus_present": True,
+        "alu_in_other_active_order": False,
+        "buyer_kyc": "VERIFIED",
+        "seller_kyc": "VERIFIED",
+        "land_use_zoning": "Residential",
+        "order_state": "FUNDED",
+        "chain_state": 1,
+        "listing_ulpin": "DEMO-ULPIN-001",
+        "bundle_ulpin": "DEMO-ULPIN-001",
+        "parcel_ulpin": "DEMO-ULPIN-001",
+        "evidence_ulpin": "DEMO-ULPIN-001",
+        "buyer_wallet": "0xbuyer",
+        "seller_wallet": "0xseller",
+    }
+
+
+def test_run_checks_all_pass_approved() -> None:
+    from app.services.checks import decide, run_checks
+
+    results = run_checks(_base_context())
+    assert len(results) == 6
+    assert all(r.passed for r in results)
+    assert decide(results) == "APPROVED"
+
+
+def test_run_checks_hard_fail_rejected() -> None:
+    from app.services.checks import decide, run_checks
+
+    ctx = _base_context()
+    ctx["listing_status"] = "DRAFT"
+    results = run_checks(ctx)
+    assert any(not r.passed and r.name == "LISTED" for r in results)
+    assert decide(results) == "REJECTED"
+
+
+def test_run_checks_zoning_missing_review() -> None:
+    from app.services.checks import decide, run_checks
+
+    ctx = _base_context()
+    ctx["land_use_zoning"] = None
+    results = run_checks(ctx)
+    zoning = [r for r in results if r.name == "ZONING_OK"][0]
+    assert not zoning.passed
+    assert zoning.missing_evidence is True
+    assert decide(results) == "NEEDS_REVIEW"

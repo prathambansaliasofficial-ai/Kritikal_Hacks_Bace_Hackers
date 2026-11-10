@@ -100,3 +100,18 @@ def decide_review(
                 (new_status, officer, reason, evidence_id),
             )
             return cursor.fetchone()
+
+
+def get_latest_evidence_for_ulpin(ulpin: str) -> dict[str, Any] | None:
+    row = fetch_one(
+        """
+        SELECT id, ulpin, status, payload, source_refs, tinyfish_run_id,
+               created_at
+        FROM evidence_sheets
+        WHERE ulpin = %s
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (ulpin,),
+    )
+    return row

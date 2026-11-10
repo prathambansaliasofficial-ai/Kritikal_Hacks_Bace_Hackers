@@ -119,6 +119,16 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 16:05 — `../whole_plan.md` T4.2/T4.3/T5.1 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
 - [.] 16:06 — Commit `feat(market): add listings, orders and six checks`; push `backend/yash`; PR khola.
 
+## Session 11 — 2026-11-10 18:30 IST (batch B5/C5: T5.2, T5.3-B, T8.1)
+
+- [.] 18:30 — `db/007_order_checks.sql` (checks/decision/decided_at columns); `app/services/checks.py` (run_checks, decide, check_results_to_api, missing_evidence flag); `app/api/routes/orders.py` (POST /orders/{id}/evaluate async — FUNDED guard, context load, chain state, run_checks/decide, save_evaluate, apply_decision); `app/services/chain_client.py` (middleware /escrow/status); routers registered in app/api/main.py.
+- [.] 18:30 — `app/services/settlement.py` (apply_decision: APPROVED→settle, REJECTED→refund, NEEDS_REVIEW→no-op, idempotent terminal, 502 on chain fail, state unchanged).
+- [.] 18:30 — `tests/conftest.py` (TEST_DATABASE_URL, apply_schema, db rollback fixture); `tests/test_integration.py` (@pytest.mark.integration: parcel+ALU, bundle+listing, order+evidence); `pyproject.toml` (integration marker, addopts -m not integration); root `Makefile` (test-integration target).
+- [.] 18:30 — Tests: test_evaluate.py (approve/reject/review/409/404/502); test_checks.py run_checks/decide additions.
+- [.] 18:35 — `ruff check backend` clean; `pytest -q backend` — 120 passed, 3 integration deselected.
+- [.] 18:35 — `../whole_plan.md` T5.2/T5.3-B/T8.1 blocks `YEH SAB HO GYA` me `[.]` kiya + C5 commit block; `backend/log-b.md` update kiya.
+- [.] 18:36 — Commit `feat(trade): evaluate, settle and integration-test orders`; push `backend/yash`; PR khola.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -253,32 +263,35 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 
 ## Phase 5 — 6 checks aur settlement
 
-### [] T5.2 — Evaluate endpoint
+### [.] T5.2 — Evaluate endpoint — Session 11, 2026-11-10 18:30 IST
 
-- [] `db/007_order_checks.sql` — `checks`, `decision`, `decided_at`.
-- [] `POST /api/v1/orders/{id}/evaluate`; all pass → APPROVED, blocking fail → REJECTED,
-  missing/N/D → NEEDS_REVIEW.
-- [] `GET /orders/{id}` me per-check result + decision.
-- [] Tests: approve/reject/review.
+- [.] `db/007_order_checks.sql` — `checks JSONB`, `decision TEXT`, `decided_at TIMESTAMPTZ`.
+- [.] `POST /api/v1/orders/{id}/evaluate` — order FUNDED (warna 409), context load, run_checks + decide, persist decision, settlement trigger; middleware chain-state fail → 502, koi persist nahi.
+- [.] `GET /api/v1/orders/{id}` me per-check result + decision.
+- [.] `app/services/chain_client.py` — middleware `GET /escrow/status/{orderId}` call.
+- [.] Tests: `test_evaluate.py` (approve→settle, reject→refund, review→no-op, non-funded 409, not-found 404, chain down 502).
+- **Done criteria:** ruff clean, pytest pass (mocked repo + middleware + settlement; live DB needs Docker).
 
-### [] T5.3-B — Settle/refund + tx hash (backend slice)
+### [.] T5.3-B — Settle/refund + tx hash (backend slice) — Session 11, 2026-11-10 18:30 IST
 
-- [] `app/services/settlement.py` — APPROVED → settle, REJECTED → refund, NEEDS_REVIEW → no-op.
-- [] Order `SETTLED/REFUNDED`, `tx_hash` save; idempotent.
-- [] Chain fail par state na badle; 502.
-- [] Tests: mocked middleware, idempotency.
+- [.] `app/services/settlement.py` — `apply_decision`: APPROVED→settle, REJECTED→refund, NEEDS_REVIEW→no-op; terminal state idempotent; chain fail → 502, state unchanged; DB state + tx_hash save.
+- [.] Called from evaluate after persisting decision.
+- [.] Middleware `T5.3-M` tak mock kiya ja sakta hai.
+- **Done criteria:** ruff clean, pytest pass; live chain/manual test needs Docker + middleware.
 
-### Commit batch C5 — T5.1, T5.2, T5.3
+### Commit batch C5 — T5.2, T5.3-B, T8.1 — Session 11, 2026-11-10 18:30 IST
 
-**Message:** `feat(trade): implement six checks and escrow settlement`
+**Message:** `feat(trade): evaluate, settle and integration-test orders`
 
 ## Phase 8 — E2E aur hardening
 
-### [] T8.1 — Real PostGIS integration tests
+### [.] T8.1 — Real PostGIS integration tests — Session 11, 2026-11-10 18:30 IST
 
-- [] `tests/conftest.py` — `TEST_DATABASE_URL`, schema apply, per-test rollback.
-- [] Integration tests: parcels, ALUs, bundles, listings, orders, evaluate, evidence.
-- [] Marker `integration`; `Makefile` target `test-integration`.
+- [.] `tests/conftest.py` — `TEST_DATABASE_URL`, `apply_schema` (sab 0*.sql), `db` fixture per-test rollback.
+- [.] `tests/test_integration.py` — `@pytest.mark.integration`: parcel+ALU, bundle+listing, order+evidence persistence.
+- [.] `pyproject.toml` — `integration` marker + `addopts = ["-m", "not integration"]` (default pytest fast).
+- [.] Root `Makefile` — `test-integration` target (`pytest -m integration -q backend -o addopts=""`).
+- **Done criteria:** ruff clean, `pytest -q backend` 120 passed, 3 integration deselected. Live `make db-up && make test-integration` needs Docker (nahi chala is session me).
 
 ### [] T8.3-B — Backend quality gate
 

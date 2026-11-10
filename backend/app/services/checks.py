@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 # All six checks are blocking: any failure rejects the trade and triggers a refund.
 CHECK_NAMES = (
@@ -19,6 +19,7 @@ class CheckResult:
     passed: bool
     reason: str
     blocking: bool
+    missing_evidence: bool = False
 
 
 def check_listed(listing_status: str, order_listing_id: int, listing_id: int) -> CheckResult:
@@ -76,7 +77,11 @@ def check_zoning_ok(land_use_zoning: str | None) -> CheckResult:
     """ZONING_OK — evidence land_use_zoning is available/partial and not restricted/agricultural."""
     if land_use_zoning is None:
         return CheckResult(
-            "ZONING_OK", False, "Zoning evidence is missing (N/D).", True
+            "ZONING_OK",
+            False,
+            "Zoning evidence is missing (N/D).",
+            True,
+            missing_evidence=True,
         )
     zoning = land_use_zoning.strip().lower()
     if zoning in ("restricted", "agricultural"):
@@ -148,3 +153,53 @@ def check_trade_match(
         "Listing, bundle, parcel, evidence and parties match.",
         True,
     )
+
+
+def run_checks(context: dict) -> list[CheckResult]:
+    """Run all six pure checks against an assembled context dict (no DB calls)."""
+    return [
+        check_listed(
+            context["listing_status"],
+            context["order_listing_id"],
+            context["listing_id"],
+        ),
+        check_bundle_intact(
+            context["bundle_status"],
+            context["alus_present"],
+            context["alu_in_other_active_order"],
+        ),
+        check_kyc_wallet(context["buyer_kyc"], context["seller_kyc"]),
+        check_zoning_ok(context.get("land_use_zoning")),
+        check_funds_in_escrow(context["order_state"], context["chain_state"]),
+        check_trade_match(
+            context["listing_ulpin"],
+            context.get("bundle_ulpin"),
+            context.get("parcel_ulpin"),
+            context.get("evidence_ulpin"),
+            context["buyer_wallet"],
+            context["seller_wallet"],
+        ),
+    ]
+
+
+def decide(results: list[CheckResult]) -> str:
+    """Map check results to APPROVED / REJECTED / NEEDS_REVIEW per docs/checks.md."""
+    hard_fail = any(
+        not r.passed and not r.missing_evidence for r in results
+    )
+    soft_fail = any(
+        not r.passed and r.missing_evidence for r in results
+    )
+    if hard_fail:
+        return "REJECTED"
+    if soft_fail:
+        return "NEEDS_REVIEW"
+    return "APPROVED"
+
+
+def check_results_to_api(results: list[CheckResult]) -> list[dict]:
+    """Serialize CheckResult for the API (drops the internal missing_evidence flag)."""
+    return [
+        {k: v for k, v in asdict(r).items() if k != "missing_evidence"}
+        for r in results
+    ]
