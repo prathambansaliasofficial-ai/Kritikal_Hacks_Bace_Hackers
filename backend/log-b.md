@@ -140,6 +140,12 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 19:35 — `../whole_plan.md` T8.3-B/T9.1 blocks `YEH SAB HO GYA` me `[.]` kiya + C6 commit block; `backend/log-b.md` update kiya.
 - [.] 19:36 — Commit `chore(backend): harden and add alu locking`; push `backend/yash`; PR khola.
 
+## Session 13 — 2026-11-10 20:00 IST (batch B6/C9 slice: T9.3-B)
+
+- [.] 20:00 — `backend/Dockerfile` — multi-stage build (python:3.12-slim builder venv + slim runtime), non-root `appuser`, `backend/app` copied, `EXPOSE 8000`, healthcheck on `/health`, CMD `uvicorn app.api.main:app --app-dir backend --host 0.0.0.0 --port 8000`; `requirements-dev.txt` installed in builder so `pycryptodome` is available.
+- [.] 20:05 — `../whole_plan.md` T9.3-B block `YEH SAB HO GYA` me `[.]` kiya + C6/C9 commit block; `backend/log-b.md` update kiya.
+- [.] 20:06 — Commit `chore(backend): add production Dockerfile`; push `backend/yash`; PR khola.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
