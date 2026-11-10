@@ -109,6 +109,16 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 14:05 — `../whole_plan.md` T3.2/T3.3/T4.1 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
 - [.] 14:06 — Commit `feat(evidence): persist evidence, review queue and wallet users`; push `backend/yash`; PR khola.
 
+## Session 10 — 2026-11-10 16:00 IST (batch B4/C4: T4.2, T4.3, T5.1)
+
+- [.] 16:00 — `db/006_listings_bundle.sql` (bundle_id column); `app/repositories/listings.py` (create/list/get/patch with KYC+bundle+uniqueness rules); `app/api/routes/listings.py` (POST 201, GET ?status, PATCH status); router registered in app/api/main.py.
+- [.] 16:00 — `app/repositories/orders.py` (create_order CREATED, fund_order with keccak256 chain_order_id match + CREATED→FUNDED, get_order); `app/api/routes/orders.py` (POST /orders, POST /funded, GET /{id}); `app/services/chain.py` (keccak-256 via pycryptodome, verified vs NIST vectors); `requirements.txt` pycryptodome; routers registered in app/api/main.py.
+- [.] 16:00 — `app/services/checks.py` (CheckResult + 6 pure blocking checks); `docs/checks.md` (policy + decision mapping + demo assumptions); router/registry not needed (pure service).
+- [.] 16:00 — Tests: test_listings.py, test_orders.py, test_checks.py (19 tests).
+- [.] 16:05 — `ruff check backend` clean; `pytest -q backend` — 111 passed.
+- [.] 16:05 — `../whole_plan.md` T4.2/T4.3/T5.1 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
+- [.] 16:06 — Commit `feat(market): add listings, orders and six checks`; push `backend/yash`; PR khola.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -214,32 +224,34 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] Tests: `test_users.py` (invalid wallet 422, upsert, get found/missing, 401, KYC 200).
 - **Done criteria:** ruff clean, pytest pass.
 
-### [] T4.2 — Listing lifecycle
+### [.] T4.2 — Listing lifecycle — Session 10, 2026-11-10 16:00 IST
 
-- [] `db/006_listings_bundle.sql` — `bundle_id` column.
-- [] `POST /api/v1/listings`, `GET ?status=LISTED`, `PATCH /{id}`.
-- [] Rules: seller KYC VERIFIED, bundle ACTIVE, price > 0, one active listing per bundle.
-- [] Tests: unverified reject, duplicate reject, happy path.
+- [.] `db/006_listings_bundle.sql` — `listings` me `bundle_id BIGINT REFERENCES bundles(id)` (IF NOT EXISTS) + index.
+- [.] `app/repositories/listings.py` — `create_listing`, `list_listings`, `get_listing`, `patch_listing_status`; rules: seller KYC VERIFIED (409), bundle ACTIVE (409), price_wei > 0 (422), one active listing per bundle (409), allowed transitions (else 409).
+- [.] `app/api/routes/listings.py` — POST /listings (201), GET /listings?status= (default LISTED), PATCH /listings/{id} status; router registered in app/api/main.py.
+- [.] Tests: `test_listings.py` (happy, unverified 409, duplicate active 409, invalid transition 409, GET items, invalid price 422).
+- **Done criteria:** ruff clean, pytest pass (mocked repo; live DB needs Docker).
 
-### [] T4.3 — Order lifecycle
+### [.] T4.3 — Order lifecycle — Session 10, 2026-11-10 16:00 IST
 
-- [] `POST /api/v1/orders`, `POST /{id}/funded`, `GET /{id}`.
-- [] Rules: buyer KYC, listing LISTED, buyer ≠ seller, price match.
-- [] Hex validation for `chain_order_id`/`tx_hash`; duplicate funding 409.
-- [] Tests: self-buy, wrong price, double funding, happy path.
+- [.] `app/repositories/orders.py` — `create_order` (buyer KYC VERIFIED, listing LISTED, buyer≠seller, amount=price → CREATED; self-buy/unverified/wrong-price 409), `fund_order` (bytes32 validation 422, chain_order_id = keccak256("landmarket-order:"+id) matched else 422, CREATED→FUNDED, duplicate 409), `get_order`.
+- [.] `app/api/routes/orders.py` — POST /orders (201), POST /orders/{id}/funded, GET /orders/{id} order shape with `chain_order_id`; router registered in app/api/main.py.
+- [.] `app/services/chain.py` — keccak-256 via pycryptodome (verified vs NIST vectors); `requirements.txt` me pycryptodome add kiya.
+- [.] Tests: `test_orders.py` (happy, self-buy 409, unverified 409, duplicate funding 409, invalid bytes32 422, chain mismatch 422, GET found/missing).
+- **Done criteria:** ruff clean, pytest pass (mocked repo; live DB needs Docker).
 
-### Commit batch C4 — T4.1, T4.2, T4.3
+### [.] T5.1 — 6-check rule engine — Session 10, 2026-11-10 16:00 IST
 
-**Message:** `feat(market): add wallet identity, listings and orders`
+- [.] `app/services/checks.py` — `CheckResult(name, passed, reason, blocking)` dataclass + 6 pure functions: `check_listed`, `check_bundle_intact`, `check_kyc_wallet`, `check_zoning_ok`, `check_funds_in_escrow`, `check_trade_match`; sab blocking.
+- [.] `docs/checks.md` — policy, decision mapping (APPROVED/REJECTED/NEEDS_REVIEW), demo assumptions.
+- [.] Tests: `test_checks.py` — 19 tests (pass/fail per check, all 6 check names).
+- **Done criteria:** ruff clean, pytest pass; DB-independent pure functions.
+
+### Commit batch C4 — T4.2, T4.3, T5.1 — Session 10, 2026-11-10 16:00 IST
+
+**Message:** `feat(market): add listings, orders and six checks`
 
 ## Phase 5 — 6 checks aur settlement
-
-### [] T5.1 — 6-check rule engine
-
-- [] `app/services/checks.py` — LISTED, BUNDLE_INTACT, KYC_WALLET, ZONING_OK,
-  FUNDS_IN_ESCROW, TRADE_MATCH.
-- [] `docs/checks.md` — policy + demo assumptions.
-- [] 12+ unit tests (pass/fail per check).
 
 ### [] T5.2 — Evaluate endpoint
 
