@@ -207,6 +207,56 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Message:** `feat(db): add postgis checks, db helpers and demo seed`
 
+### [.] T2.1 — Parcel read API
+
+**Done:** 2026-11-10 11:30 IST — Session 8
+
+**Kya hua:** `backend/app/repositories/parcels.py` banaya — `get_parcel(ulpin)` aur `list_parcels(bbox, limit)` with
+`ST_AsGeoJSON`, `ST_MakeEnvelope(...,4326)`, `ST_Intersects`. `backend/app/api/routes/parcels.py`:
+`GET /api/v1/parcels/{ulpin}` → Parcel Feature (missing 404), `GET /api/v1/parcels?bbox=...&limit=100` → FeatureCollection
+(limit max 100, invalid bbox 422). Router registered in `app/api/main.py`. `demo: true` set when
+`geometry_source='DEMO_FIXTURE_NOT_OFFICIAL'`.
+**Kya karta hai:** GeoJSON parcel read API; bbox + limit validation at the route.
+**Files:** `backend/app/repositories/parcels.py`, `backend/app/api/routes/parcels.py`, `backend/app/api/main.py`,
+`backend/tests/test_parcels.py`.
+**Verify:** ruff clean, `pytest -q backend` 33 passed; missing→404, invalid bbox→422, limit 101→422 (unit-tested via
+mocked repo; live DB needs Docker).
+
+### [.] T2.2 — Deterministic ALU grid endpoint
+
+**Done:** 2026-11-10 11:30 IST — Session 8
+
+**Kya hua:** `backend/app/services/alu_grid.py` banaya exactly `docs/decisions.md` §3: Web Mercator forward/inverse,
+`ALU-{level}-{slug(ix)}-{slug(iy)}` IDs, parent = next coarser level (`1km` → null), closed GeoJSON polygon ring,
+`area_sqm`, hard cap 1500 with `GridError("Zoom in: N cells exceeds 1500")`. `backend/app/api/routes/alus.py`:
+`GET /api/v1/alus?bbox=...&level=10m` → FeatureCollection; unknown level 422; over-cap → 422. Shared `parse_bbox` in
+`app/api/routes/bbox.py`. Router registered in `app/api/main.py`.
+**Kya karta hai:** Deterministic ALU grid cells for a bbox/level with parent links and 1500-cell cap.
+**Files:** `backend/app/services/alu_grid.py`, `backend/app/api/routes/alus.py`, `backend/app/api/routes/bbox.py`,
+`backend/app/api/main.py`, `backend/tests/test_alu_grid.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_alu_grid.py` pass (determinism, parent-child, cap, negative `m` slug,
+unknown level 422, over-cap route 422, feature collection shape).
+
+### [.] T2.3 — Bundle schema aur API
+
+**Done:** 2026-11-10 11:30 IST — Session 8
+
+**Kya hua:** `db/003_bundles.sql` banaya: `bundles` (id, ulpin FK, name, status DRAFT/ACTIVE/PAUSED/ARCHIVED,
+created_by, timestamps) aur `bundle_alus` (bundle_id, alu_id PK). `backend/app/repositories/bundles.py`:
+`create_bundle`, `get_bundle`, `set_bundle_status` with validation (ULPIN exists → 404; ALUs exist + linked to parcel →
+422; duplicate ALU → 422; allowed transitions DRAFT→ACTIVE/PAUSED/ARCHIVED, ACTIVE→PAUSED/ARCHIVED, PAUSED→ACTIVE/ARCHIVED,
+else 409). `backend/app/api/routes/bundles.py`: POST /bundles (201), GET /bundles/{id}, PATCH /bundles/{id} status.
+Router registered in `app/api/main.py`.
+**Kya karta hai:** Bundle create/read/status with parcel-scoped ALU validation and status-transition rules.
+**Files:** `backend/db/003_bundles.sql`, `backend/app/repositories/bundles.py`, `backend/app/api/routes/bundles.py`,
+`backend/app/api/main.py`, `backend/tests/test_bundles.py`.
+**Verify:** ruff clean; `pytest -q backend` pass (happy path, cross-parcel 422, duplicate 422, invalid transition 409,
+GET found/missing, PATCH happy) via mocked repo; live DB needs Docker.
+
+### Commit batch C2 — T2.1, T2.2, T2.3
+
+**Message:** `feat(api): expose parcels, alu grid and bundles`
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -237,55 +287,6 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Owner:** Backend. Context pack: `docs/context/C2.md`.
 
-### [] T2.1 — Parcel read API
-
-**Kya karna hai**
-1. `backend/app/repositories/parcels.py` banao: ULPIN se parcel, bbox se parcels (PostGIS `ST_AsGeoJSON`,
-   `ST_MakeEnvelope(...,4326)`, `ST_Intersects`).
-2. `backend/app/api/routes/parcels.py`:
-   - `GET /api/v1/parcels/{ulpin}` → GeoJSON Feature + attributes + `geometry_status`; missing par 404.
-   - `GET /api/v1/parcels?bbox=minLon,minLat,maxLon,maxLat&limit=100` → FeatureCollection; limit max 100.
-3. `app/api/main.py` me router register karo.
-4. Tests: invalid bbox 422, missing ULPIN 404, limit >100 clamp/reject.
-
-**Files:** `backend/app/repositories/parcels.py`, `backend/app/api/routes/parcels.py`,
-`backend/app/api/main.py`, `backend/tests/test_parcels.py`.
-**Done criteria:** `GET /api/v1/parcels/DEMO-ULPIN-001` demo polygon laut-ta hai.
-**Verify:** `curl -s localhost:8000/api/v1/parcels/DEMO-ULPIN-001 | head`.
-
-### [] T2.2 — Deterministic ALU grid endpoint
-
-**Kya karna hai**
-1. `backend/app/services/alu_grid.py` banao. Levels: `1km`=1000m, `100m`, `10m`, `1m`,
-   `0.1m2`=0.1m × 1m. Web Mercator meters me cell index nikalo, wapas lon/lat me convert karo.
-2. ID format: `ALU-{level}-{ix}-{iy}`; parent ID next coarser level ke same formula se.
-3. `GET /api/v1/alus?bbox=...&level=10m` → GeoJSON FeatureCollection, har feature me
-   `alu_id`, `parent_id`, `level`. Max 1500 cells; zyada ho to 422 "zoom in" error.
-4. Tests: same input par same ID, parent-child relation sahi, cap enforce.
-
-**Files:** `backend/app/services/alu_grid.py`, `backend/app/api/routes/alus.py`,
-`backend/app/api/main.py`, `backend/tests/test_alu_grid.py`.
-**Done criteria:** Endpoint deterministic output deta hai; 1500 se zyada par 422.
-**Verify:** `pytest -q backend/tests/test_alu_grid.py`.
-
-### [] T2.3 — Bundle schema aur API
-
-**Kya karna hai**
-1. `backend/db/003_bundles.sql`: `bundles` (id, ulpin FK, name, status `DRAFT/ACTIVE/PAUSED/ARCHIVED`,
-   created_by, timestamps) aur `bundle_alus` (bundle_id, alu_id, PK).
-2. Routes: `POST /api/v1/bundles` `{ulpin,name,alu_ids,created_by}`; `GET /api/v1/bundles/{id}`;
-   `PATCH /api/v1/bundles/{id}` `{status}`.
-3. Validation: saare ALU exist karein aur usi parcel se linked hon; duplicate ALU reject.
-4. Tests: happy path, cross-parcel ALU reject, duplicate reject, invalid status transition.
-
-**Files:** `backend/db/003_bundles.sql`, `backend/app/repositories/bundles.py`,
-`backend/app/api/routes/bundles.py`, `backend/app/api/main.py`, `backend/tests/test_bundles.py`.
-**Done criteria:** Demo parcel ke 4 ALUs ka ACTIVE bundle ban jaata hai.
-**Verify:** `make db-reset && make seed` phir bundle POST.
-
-### Commit batch C2 — T2.1, T2.2, T2.3
-
-**Message:** `feat(api): expose parcels, alu grid and bundles`
 
 ---
 

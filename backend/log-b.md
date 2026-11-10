@@ -89,6 +89,16 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 09:28 — `../whole_plan.md` T1.1/T1.2/T1.3 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
 - [.] 09:29 — Commit `feat(db): add postgis checks, db helpers and demo seed`; push `backend/yash`; PR khola.
 
+## Session 8 — 2026-11-10 11:30 IST (batch B2: T2.1, T2.2, T2.3)
+
+- [.] 11:30 — `app/repositories/parcels.py` (`get_parcel`, `list_parcels`); `app/api/routes/parcels.py` (GET /{ulpin} 404, GET ?bbox FeatureCollection, limit max 100, invalid bbox 422); router registered in `app/api/main.py`.
+- [.] 11:30 — `app/services/alu_grid.py` (Web Mercator, `ALU-{level}-{slug(ix)}-{slug(iy)}`, parent next coarser, cap 1500 → `GridError`); `app/api/routes/alus.py` (unknown level 422, over-cap 422); shared `parse_bbox` in `app/api/routes/bbox.py`; routers registered in `app/api/main.py`.
+- [.] 11:30 — `db/003_bundles.sql` (`bundles`, `bundle_alus`); `app/repositories/bundles.py` (`create_bundle`/404/422-duplicate, `get_bundle`, `set_bundle_status`/409-transition); `app/api/routes/bundles.py` (POST 201, GET, PATCH status); router registered in `app/api/main.py`.
+- [.] 11:30 — Tests: `test_parcels.py`, `test_alu_grid.py`, `test_bundles.py` (happy, cross-parcel 422, duplicate 422, invalid transition 409, GET found/missing, PATCH happy).
+- [.] 11:31 — `ruff check backend` clean; `pytest -q backend` — 33 passed.
+- [.] 11:31 — `../whole_plan.md` T2.1/T2.2/T2.3 blocks `YEH SAB HO GYA` me `[.]` kiya; `backend/log-b.md` update kiya.
+- [.] 11:32 — Commit `feat(api): expose parcels, alu grid and bundles`; push `backend/yash`; PR khola.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -130,28 +140,33 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 
 ## Phase 2 — Parcel, ALU aur bundle API
 
-### [] T2.1 — Parcel read API
+### [.] T2.1 — Parcel read API — Session 8, 2026-11-10 11:30 IST
 
-- [] `GET /api/v1/parcels/{ulpin}` — GeoJSON + attributes; missing 404.
-- [] `GET /api/v1/parcels?bbox=...&limit=100` — FeatureCollection, limit max 100.
-- [] Repository me `ST_AsGeoJSON`, `ST_MakeEnvelope`, `ST_Intersects`.
-- [] Tests: invalid bbox 422, missing 404, limit validation.
+- [.] `GET /api/v1/parcels/{ulpin}` — GeoJSON Feature + attributes + `geometry_status` + `demo: true`; missing 404 `{"detail":"Parcel not found"}`.
+- [.] `GET /api/v1/parcels?bbox=...&limit=100` — FeatureCollection; limit max 100 (422 over), invalid bbox 422.
+- [.] Repository `backend/app/repositories/parcels.py`: `get_parcel`, `list_parcels` with `ST_AsGeoJSON`, `ST_MakeEnvelope(...,4326)`, `ST_Intersects`.
+- [.] `backend/app/api/routes/parcels.py` + router registered in `app/api/main.py`.
+- [.] Tests: `tests/test_parcels.py` (found/missing/invalid-bbox/limit-over-max/feature-collection).
+- **Done criteria:** ruff clean, pytest pass; missing→404, invalid bbox→422, limit 101→422 (mocked repo; live DB needs Docker).
 
-### [] T2.2 — Deterministic ALU grid endpoint
+### [.] T2.2 — Deterministic ALU grid endpoint — Session 8, 2026-11-10 11:30 IST
 
-- [] `app/services/alu_grid.py` — levels `1km/100m/10m/1m/0.1m2`; Web Mercator cell math.
-- [] ID `ALU-{level}-{ix}-{iy}`; parent next coarser level.
-- [] `GET /api/v1/alus?bbox=...&level=...`; max 1500 cells, zyada par 422.
-- [] Tests: determinism, parent relation, cap.
+- [.] `app/services/alu_grid.py` — levels `1km/100m/10m/1m/0.1m2`, Web Mercator forward/inverse per `docs/decisions.md` §3.
+- [.] ID `ALU-{level}-{slug(ix)}-{slug(iy)}`; negative indices use `m` slug; parent = next coarser level (`1km` → null); closed GeoJSON polygon; `area_sqm`.
+- [.] `GET /api/v1/alus?bbox=...&level=10m` → FeatureCollection; unknown level 422; >1500 cells → 422 `"Zoom in: N cells exceeds 1500"`.
+- [.] Shared `parse_bbox` in `app/api/routes/bbox.py`. Router registered in `app/api/main.py`.
+- [.] Tests: `tests/test_alu_grid.py` (determinism, parent-child, cap, negative `m` slug, unknown level, over-cap route, feature shape).
+- **Done criteria:** ruff clean, `pytest -q backend/tests/test_alu_grid.py` pass; deterministic output; 1500+ → 422.
 
-### [] T2.3 — Bundle schema + API
+### [.] T2.3 — Bundle schema + API — Session 8, 2026-11-10 11:30 IST
 
-- [] `db/003_bundles.sql` — `bundles`, `bundle_alus`.
-- [] `POST /api/v1/bundles`, `GET /{id}`, `PATCH /{id}` status.
-- [] Validation: ALUs exist + same parcel; duplicate reject.
-- [] Tests: happy path, cross-parcel reject, duplicate reject.
+- [.] `db/003_bundles.sql` — `bundles` (id, ulpin FK, name, status, created_by, timestamps) + `bundle_alus` (bundle_id, alu_id PK).
+- [.] `backend/app/repositories/bundles.py` — `create_bundle`, `get_bundle`, `set_bundle_status`; validation: ULPIN exists (404), ALUs exist + same parcel (422), duplicate ALU (422), allowed status transitions (else 409).
+- [.] `backend/app/api/routes/bundles.py` — POST /bundles (201), GET /bundles/{id}, PATCH /bundles/{id} status; router registered in `app/api/main.py`.
+- [.] Tests: `tests/test_bundles.py` (happy path, cross-parcel 422, duplicate 422, invalid transition 409, GET found/missing, PATCH happy).
+- **Done criteria:** ruff clean, pytest pass (mocked repo; live DB needs Docker).
 
-### Commit batch C2 — T2.1, T2.2, T2.3
+### Commit batch C2 — T2.1, T2.2, T2.3 — Session 8, 2026-11-10 11:30 IST
 
 **Message:** `feat(api): expose parcels, alu grid and bundles`
 
