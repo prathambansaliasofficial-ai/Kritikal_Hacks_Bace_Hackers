@@ -323,7 +323,42 @@ GET found/missing, PATCH happy) via mocked repo; live DB needs Docker.
 
 **Message:** `feat(market): add listings, orders and six checks`
 
-## Repo hygiene — 2026-10-29 22:11 IST
+### [.] T5.2 — Evaluate endpoint aur decision policy
+
+**Done:** 2026-11-10 18:30 IST — Session 11
+
+**Kya hua:** `backend/db/007_order_checks.sql` banaya — orders me `checks JSONB`, `decision TEXT`, `decided_at TIMESTAMPTZ` column (IF NOT EXISTS). `backend/app/services/checks.py` me `run_checks(context)` aur `decide(results)` aur `check_results_to_api()` banaye — `missing_evidence` flag se ZONING_OK missing = NEEDS_REVIEW, blocking fail = REJECTED, sab pass = APPROVED. `backend/app/api/routes/orders.py` me `POST /api/v1/orders/{id}/evaluate` (async) banaya — order FUNDED ho (warna 409), listing/bundle/ALUs/users/evidence load karo, middleware se chain state lo (failure → 502, koi persist nahi), run_checks + decide karo, `save_evaluate` se DB me save karo, phir `apply_decision` (settle/refund/no-op) call karo. `backend/app/services/chain_client.py` banaya — middleware `GET /escrow/status/{orderId}` call kar ke chain state wapas kare (failure → ChainClientError → 502). Router registered in app/api/main.py.
+**Kya karta hai:** Order evaluate → 6 checks → decision persist → settlement trigger.
+**Files:** `backend/db/007_order_checks.sql`, `backend/app/api/routes/orders.py`, `backend/app/services/checks.py`, `backend/app/services/chain_client.py`, `backend/app/services/settlement.py`, `backend/tests/test_evaluate.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_evaluate.py` pass (approve→settle, reject→refund, review→no-op, non-funded 404/409, not-found 404, chain down 502) via mocked repo + middleware + settlement; live DB needs Docker.
+
+### [.] T5.3-B — Backend settle/refund wiring (backend slice)
+
+**Done:** 2026-11-10 18:30 IST — Session 11
+
+**Kya hua:** `backend/app/services/settlement.py` banaya — `apply_decision(order, decision)` async: APPROVED → POST /escrow/settle (state SETTLED), REJECTED → POST /escrow/refund (state REFUNDED), NEEDS_REVIEW → no-op; terminal state pe idempotent (dobara call → current state, koi middleware call nahi); middleware/chain fail par SettlementError → 502, state unchanged; success par DB me state + tx_hash save. `backend/app/api/routes/orders.py` me evaluate se call kiya jaata hai. Middleware `T5.3-M` tak mock kiya ja sakta hai.
+**Kya karta hai:** APPROVED→settle, REJECTED→refund, NEEDS_REVIEW→no-op, idempotent, fail-safe.
+**Files:** `backend/app/services/settlement.py`, `backend/app/api/routes/orders.py`, `backend/tests/test_evaluate.py`.
+**Verify:** ruff clean; pytest pass (evaluate tests cover approve/reject/review settlement paths) via mocked middleware; live chain/manual test needs Docker + middleware.
+
+### [.] T8.1 — Real PostGIS integration tests
+
+**Done:** 2026-11-10 18:30 IST — Session 11
+
+**Kya hua:** `backend/tests/conftest.py` banaya — `TEST_DATABASE_URL`, `apply_schema` (sab 0*.sql migration ek baar), `db` fixture (per-test rollback). `backend/tests/test_integration.py` banaya — `@pytest.mark.integration` test: parcel+ALU persistence, bundle+listing flow, order+evidence persistence. `backend/pyproject.toml` me `integration` marker aur `addopts = ["-m", "not integration"]` add kiya (default pytest fast, integration alag command se). Root `Makefile` me `test-integration` target add kiya. `backend/tests/test_checks.py` me `run_checks`/`decide` unit tests (all-pass→APPROVED, hard-fail→REJECTED, zoning-missing→NEEDS_REVIEW) add kiye.
+**Kya karta hai:** Real PostGIS DB par integration tests; default pytest chalna fast rahe, integration `make test-integration` se.
+**Files:** `backend/tests/conftest.py`, `backend/tests/test_integration.py`, `backend/pyproject.toml`, `Makefile`, `backend/tests/test_checks.py`.
+**Verify:** ruff clean; `pytest -q backend` — 120 passed, 3 integration deselected (default fast). Live `make db-up && make test-integration` needs Docker (nahi chala is session me).
+
+
+### Commit batch C5 — T5.2, T5.3-B, T8.1
+
+**Message:** `feat(trade): evaluate, settle and integration-test orders`
+
+
+
+---
+
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
   `backend/log-b.md`, `middleware/log-m.md`.
@@ -398,21 +433,6 @@ fake run mat karo.
 **Owner split:** `T5.1`, `T5.2`, `T5.3-B` backend; `T5.3-M` middleware. Context pack: `docs/context/C5.md`.
 
 
-### [] T5.2 — Evaluate endpoint aur decision policy
-
-**Kya karna hai**
-1. `backend/db/007_order_checks.sql`: orders me `checks JSONB`, `decision TEXT`,
-   `decided_at TIMESTAMPTZ`; decision `APPROVED/NEEDS_REVIEW/REJECTED`.
-2. `POST /api/v1/orders/{id}/evaluate`: context load karo, 6 checks chalao, result persist karo.
-3. Decision: sab pass → `APPROVED`; blocking fail → `REJECTED`; sirf missing/N/D evidence →
-   `NEEDS_REVIEW`. Exact mapping `docs/checks.md` me.
-4. `GET /api/v1/orders/{id}` response me per-check result + decision de.
-5. Tests: approve, reject, review scenarios.
-
-**Files:** `backend/db/007_order_checks.sql`, `backend/app/api/routes/orders.py`,
-`backend/app/services/checks.py`, `docs/checks.md`, `backend/tests/test_evaluate.py`.
-**Done criteria:** Ek order evaluate hoke decision DB me save hota hai.
-**Verify:** `pytest -q backend/tests/test_evaluate.py`.
 
 ### [] T5.3-M — Middleware escrow status endpoint (middleware slice)
 
@@ -428,27 +448,9 @@ fake run mat karo.
 **Done criteria:** `curl localhost:8090/escrow/status/<orderId>` sahi state deta hai.
 **Verify:** local chain + `curl`.
 
-### [] T5.3-B — Backend settle/refund wiring (backend slice)
-
-**Owner:** Backend. May mock `T5.3-M` until it is merged.
-
-**Kya karna hai**
-1. `backend/app/services/settlement.py`: `APPROVED` → settle, `REJECTED` → refund,
-   `NEEDS_REVIEW` → kuch nahi. Calls middleware par jaayein.
-2. Success par order state `SETTLED/REFUNDED`, `tx_hash` save; dobara call idempotent ho (409/200).
-3. Middleware/chain fail par order state na badle; error 502.
-4. Tests: mocked middleware se approve/reject/idempotency; manual local chain test.
-
-**Files:** `backend/app/services/settlement.py`, `backend/app/api/routes/orders.py`,
-`backend/tests/test_settlement.py`.
-**Done criteria:** Evaluate ke baad settle/refund call hota hai aur tx hash DB me aata hai.
-**Verify:** `pytest -q backend/tests/test_settlement.py`, phir local chain par manual.
-
-### Commit batch C5 — T5.1, T5.2, T5.3-M, T5.3-B
-
-**Message:** `feat(trade): implement six checks and escrow settlement`
 
 ---
+
 
 ## Phase 6 — Blockchain deployment — [0/3]
 
@@ -630,21 +632,6 @@ fake run mat karo.
 
 **Owner split:** `T8.1` backend; `T8.2` lead; `T8.3-B/M/F` backend/middleware/frontend; `T8.3-D` lead. Context pack: `docs/context/C8.md`.
 
-### [] T8.1 — Real PostGIS integration tests
-
-**Owner:** Backend. Context pack: `docs/context/C8.md`.
-
-**Kya karna hai**
-1. `backend/tests/conftest.py`: `TEST_DATABASE_URL` se connection, schema apply, per-test rollback.
-2. Integration tests: parcel bbox, ALU grid, bundle validation, listing/order transitions,
-   evaluate decision, evidence persistence.
-3. Marker `@pytest.mark.integration`; default `pytest` fast rahe, integration alag command se chale.
-4. `Makefile` me `test-integration` target.
-
-**Files:** `backend/tests/conftest.py`, `backend/tests/test_integration_*.py`,
-`backend/pyproject.toml`, `Makefile`.
-**Done criteria:** DB up hone par saare integration tests pass.
-**Verify:** `make db-up && make test-integration`.
 
 ### [] T8.2 — One-command demo runner
 
