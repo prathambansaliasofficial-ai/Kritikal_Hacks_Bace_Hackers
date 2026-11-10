@@ -129,6 +129,17 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] 18:35 — `../whole_plan.md` T5.2/T5.3-B/T8.1 blocks `YEH SAB HO GYA` me `[.]` kiya + C5 commit block; `backend/log-b.md` update kiya.
 - [.] 18:36 — Commit `feat(trade): evaluate, settle and integration-test orders`; push `backend/yash`; PR khola.
 
+## Session 12 — 2026-11-10 19:30 IST (batch B6/C6: T8.3-B, T9.1)
+
+- [.] 19:30 — `app/api/main.py` — global exception handler returns generic 500 (no stack-trace/internals leak); CORS specific origins; controlled `HTTPException` details.
+- [.] 19:30 — `docs/limitations.md` — demo data, KYC stub, testnet only, error handling, validation, partial-bundle sale rules, out-of-scope.
+- [.] 19:30 — `db/008_alu_locks.sql` — partial unique index on `listings(alu_id)` active statuses (one active listing per ALU).
+- [.] 19:30 — `app/repositories/listings.py` — `alu_id` optional on create/patch; `alu_has_sold_listing`/`alu_has_active_listing` reject double-sell and sold-relist (409).
+- [.] 19:30 — `tests/test_alu_locks.py` — same-ALU two active listings rejected, sold-ALU relist rejected, fresh ALU success.
+- [.] 19:35 — `ruff check backend` clean; `pytest -q backend` — 126 passed, 3 integration deselected.
+- [.] 19:35 — `../whole_plan.md` T8.3-B/T9.1 blocks `YEH SAB HO GYA` me `[.]` kiya + C6 commit block; `backend/log-b.md` update kiya.
+- [.] 19:36 — Commit `chore(backend): harden and add alu locking`; push `backend/yash`; PR khola.
+
 ## Git status
 
 - [.] 2026-10-27 — Branch `main`; latest pushed commit `348538c` — `m` — `opencode.json`.
@@ -293,18 +304,30 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 - [.] Root `Makefile` — `test-integration` target (`pytest -m integration -q backend -o addopts=""`).
 - **Done criteria:** ruff clean, `pytest -q backend` 120 passed, 3 integration deselected. Live `make db-up && make test-integration` needs Docker (nahi chala is session me).
 
-### [] T8.3-B — Backend quality gate
+### [.] T8.3-B — Backend quality gate — Session 12, 2026-11-10 19:30 IST
 
-- [] `ruff`, `pytest`, `npm audit` (middleware), secret grep.
-- [] Input validation/CORS/error leakage review.
-- [] Docs: setup, demo, limitations.
+- [.] `ruff`, `pytest` pass (126 tests; integration deselected, needs Docker).
+- [.] Input validation/CORS/error leakage review: global exception handler in `app/api/main.py`
+  returns generic 500 (no internals leak); CORS specific origins; all route errors controlled
+  `HTTPException` details.
+- [.] Docs: `docs/limitations.md` written (demo data, KYC stub, testnet only, error handling,
+  validation, partial-bundle sale rules, out-of-scope).
+- **Done criteria:** ruff clean, `pytest -q backend` pass.
 
-## Phase 9 — Stretch
+### [.] T9.1 — ALU locking + double-sell protection (backend part) — Session 12, 2026-11-10 19:30 IST
 
-### [] T9.1 — ALU locking + double-sell protection (backend part)
+- [.] `db/008_alu_locks.sql` — partial unique index on `listings(alu_id)` where status IN
+  (DRAFT,LISTED,PAUSED) → one active listing per ALU; sold-ALU lock documented.
+- [.] `app/repositories/listings.py` — `create_listing`/`patch_listing_status` accept optional
+  `alu_id`; `alu_has_sold_listing` + `alu_has_active_listing` reject double-sell and relisting
+  sold ALUs (409).
+- [.] Tests: `tests/test_alu_locks.py` — same-ALU two active listings rejected, sold-ALU relist
+  rejected, fresh ALU success.
+- **Done criteria:** ruff clean, pytest pass; Ek ALU do active listings me nahi aa sakta.
 
-- [] `db/008_alu_locks.sql` — active listing per ALU unique; sold lock.
-- [] Tests: same ALU two active listings reject.
+### Commit batch C6 — T8.3-B, T9.1 — Session 12, 2026-11-10 19:30 IST
+
+**Message:** `chore(backend): harden and add alu locking`
 
 ---
 

@@ -72,8 +72,61 @@ def count_active_listings_for_bundle(
     return int(row["c"])
 
 
+def alu_has_sold_listing(
+    alu_id: str, exclude_listing_id: int | None = None
+) -> bool:
+    """True iff a SOLD listing already exists for this ALU (sold lock)."""
+    if exclude_listing_id is None:
+        row = fetch_one(
+            """
+            SELECT 1 FROM listings
+            WHERE alu_id = %s AND status = 'SOLD'
+            LIMIT 1
+            """,
+            (alu_id,),
+        )
+    else:
+        row = fetch_one(
+            """
+            SELECT 1 FROM listings
+            WHERE alu_id = %s AND status = 'SOLD' AND id <> %s
+            LIMIT 1
+            """,
+            (alu_id, exclude_listing_id),
+        )
+    return row is not None
+
+
+def alu_has_active_listing(
+    alu_id: str, exclude_listing_id: int | None = None
+) -> bool:
+    """True iff another ACTIVE listing already exists for this ALU."""
+    if exclude_listing_id is None:
+        row = fetch_one(
+            """
+            SELECT 1 FROM listings
+            WHERE alu_id = %s AND status = ANY(%s)
+            LIMIT 1
+            """,
+            (alu_id, list(ACTIVE_STATUSES)),
+        )
+    else:
+        row = fetch_one(
+            """
+            SELECT 1 FROM listings
+            WHERE alu_id = %s AND status = ANY(%s) AND id <> %s
+            LIMIT 1
+            """,
+            (alu_id, list(ACTIVE_STATUSES), exclude_listing_id),
+        )
+    return row is not None
+
+
 def create_listing(
-    bundle_id: int, seller_wallet: str, price_wei: str
+    bundle_id: int,
+    seller_wallet: str,
+    price_wei: str,
+    alu_id: str | None = None,
 ) -> dict[str, Any]:
     bundle = get_bundle(bundle_id)
     if bundle is None:
@@ -97,13 +150,19 @@ def create_listing(
     if count_active_listings_for_bundle(bundle_id) > 0:
         raise ListingError(409, "Bundle already has an active listing")
 
+    if alu_id is not None:
+        if alu_has_sold_listing(alu_id):
+            raise ListingError(409, "ALU is sold and cannot be re-listed")
+        if alu_has_active_listing(alu_id):
+            raise ListingError(409, "ALU already has an active listing")
+
     row = fetch_one(
         """
-        INSERT INTO listings (bundle_id, ulpin, seller_wallet, price_wei, status)
-        VALUES (%s, %s, %s, %s, 'DRAFT')
-        RETURNING id, bundle_id, ulpin, seller_wallet, price_wei, status, created_at
+        INSERT INTO listings (bundle_id, ulpin, seller_wallet, price_wei, status, alu_id)
+        VALUES (%s, %s, %s, %s, 'DRAFT', %s)
+        RETURNING id, bundle_id, ulpin, seller_wallet, price_wei, status, alu_id, created_at
         """,
-        (bundle_id, bundle["ulpin"], seller_wallet, price_wei),
+        (bundle_id, bundle["ulpin"], seller_wallet, price_wei, alu_id),
     )
     return _row_dict(row)
 
@@ -113,7 +172,8 @@ def list_listings(status: str | None = None) -> list[dict[str, Any]]:
         status = "LISTED"
     rows = fetch_all(
         """
-        SELECT id, bundle_id, ulpin, seller_wallet, price_wei, status, created_at
+        SELECT id, bundle_id, ulpin, seller_wallet, price_wei, status, alu_id,
+               created_at
         FROM listings
         WHERE status = %s
         ORDER BY id DESC
@@ -127,7 +187,8 @@ def get_listing(listing_id: int) -> dict[str, Any] | None:
     return _row_dict(
         fetch_one(
             """
-            SELECT id, bundle_id, ulpin, seller_wallet, price_wei, status, created_at
+            SELECT id, bundle_id, ulpin, seller_wallet, price_wei, status, alu_id,
+                   created_at
             FROM listings
             WHERE id = %s
             """,
@@ -144,11 +205,21 @@ def patch_listing_status(listing_id: int, status: str) -> dict[str, Any] | None:
     if status not in ALLOWED_TRANSITIONS.get(current, set()):
         raise ListingError(409, f"invalid transition {current} -> {status}")
 
-    if status == "LISTED":
+    if status in ACTIVE_STATUSES:
         if count_active_listings_for_bundle(
             int(listing["bundle_id"]), exclude_listing_id=listing_id
         ) > 0:
             raise ListingError(409, "Bundle already has an active listing")
+        listing_alu_id = listing["alu_id"]
+        if listing_alu_id is not None:
+            if alu_has_sold_listing(
+                listing_alu_id, exclude_listing_id=listing_id
+            ):
+                raise ListingError(409, "ALU is sold and cannot be re-listed")
+            if alu_has_active_listing(
+                listing_alu_id, exclude_listing_id=listing_id
+            ):
+                raise ListingError(409, "ALU already has an active listing")
 
     return _row_dict(
         fetch_one(
@@ -156,7 +227,8 @@ def patch_listing_status(listing_id: int, status: str) -> dict[str, Any] | None:
             UPDATE listings
             SET status = %s, updated_at = now()
             WHERE id = %s
-            RETURNING id, bundle_id, ulpin, seller_wallet, price_wei, status, created_at
+            RETURNING id, bundle_id, ulpin, seller_wallet, price_wei, status,
+                      alu_id, created_at
             """,
             (status, listing_id),
         )

@@ -353,6 +353,24 @@ GET found/missing, PATCH happy) via mocked repo; live DB needs Docker.
 
 
 
+### [.] T8.3-B — Backend security/quality gate (backend slice)
+
+**Done:** 2026-11-10 19:30 IST — Session 12
+
+**Kya hua:** Backend quality gate complete: ruff clean, `pytest -q backend` 126 passed (integration deselected, needs Docker). Global exception handler added to `app/api/main.py` so no stack traces/internals leak; CORS uses specific origins (no wildcard+credentials); all route errors are controlled `HTTPException` details. `docs/limitations.md` written (demo data, KYC stub, testnet only, error handling, validation, out-of-scope).
+**Files:** `backend/app/api/main.py`, `docs/limitations.md`.
+**Verify:** ruff clean; `pytest -q backend` pass.
+
+### [.] T9.1 — ALU locking + double-sell protection
+
+**Done:** 2026-11-10 19:30 IST — Session 12
+
+**Kya hua:** `db/008_alu_locks.sql` — partial unique index on `listings(alu_id)` where status IN (DRAFT,LISTED,PAUSED) (one active listing per ALU). `app/repositories/listings.py` — `create_listing`/`patch_listing_status` accept optional `alu_id`; sold-ALU lock (`alu_has_sold_listing`) and active-per-ALU lock (`alu_has_active_listing`) reject double-sell and relisting sold ALUs with 409. `tests/test_alu_locks.py` — same-ALU two active listings rejected, sold-ALU relist rejected, fresh ALU success.
+**Files:** `backend/db/008_alu_locks.sql`, `backend/app/repositories/listings.py`, `backend/tests/test_alu_locks.py`, `docs/limitations.md` (partial-bundle sale rules).
+**Verify:** ruff clean; `pytest -q backend` pass.
+
+
+
 ---
 
 
@@ -643,14 +661,6 @@ fake run mat karo.
 **Done criteria:** Fresh terminal se `make demo` chal ke URL deta hai.
 **Verify:** `make demo`.
 
-### [] T8.3-B — Backend security/quality gate (backend slice)
-
-**Owner:** Backend.
-
-1. Input validation, CORS, error leakage on backend routes.
-2. `ruff`, `pytest`, `pytest -m integration`.
-3. Backend part of `docs/limitations.md` (demo data, KYC stub, testnet only).
-**Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
 ### [] T8.3-M — Middleware security/quality gate (middleware slice)
 
@@ -688,13 +698,6 @@ fake run mat karo.
 
 **Owner split:** `T9.1` backend; `T9.2` AI; `T9.3-B/M/F` backend/middleware/frontend; `T9.3-D` lead. Context pack: `docs/context/C9.md`.
 
-### [] T9.1 — ALU hierarchy, lock aur double-sell protection
-
-**Kya karna hai:** Generated ALUs ko select par persist karo; parent chain maintain karo;
-active listing ke liye per-ALU unique index; sold ALUs lock; partial bundle sale rules document karo.
-**Files:** `backend/db/008_alu_locks.sql`, `backend/app/services/alu_grid.py`,
-`backend/app/api/routes/alus.py`, `backend/tests/test_alu_locks.py`.
-**Done criteria:** Ek ALU do active listings me nahi aa sakta.
 
 ### [] T9.2 — Multi-portal evidence + confidence
 

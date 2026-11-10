@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.routes import (
     alus,
@@ -41,3 +42,10 @@ app.include_router(users.router, prefix=settings.api_prefix)
 app.include_router(listings.router, prefix=settings.api_prefix)
 app.include_router(orders.router, prefix=settings.api_prefix)
 app.include_router(verifications.router, prefix=settings.api_prefix)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Never leak internals: return a generic 500 for any unhandled error."""
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
