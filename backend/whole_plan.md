@@ -292,6 +292,37 @@ GET found/missing, PATCH happy) via mocked repo; live DB needs Docker.
 
 **Message:** `feat(evidence): persist evidence, review queue and wallet users`
 
+### [.] T4.2 — Listing create/browse/pause
+
+**Done:** 2026-11-10 16:00 IST — Session 10
+
+**Kya hua:** `db/006_listings_bundle.sql` banaya — `listings` me `bundle_id BIGINT REFERENCES bundles(id)` column (IF NOT EXISTS) aur index. `backend/app/repositories/listings.py` banaya — `create_listing`, `list_listings`, `get_listing`, `patch_listing_status` with rules: seller KYC VERIFIED (409), bundle ACTIVE (409), price_wei > 0 (422), one active listing per bundle (409), allowed transitions DRAFT→LISTED/CANCELLED, LISTED→PAUSED/CANCELLED, PAUSED→LISTED/CANCELLED (else 409). `backend/app/api/routes/listings.py`: POST /listings (201), GET /listings?status= (default LISTED), PATCH /listings/{id} status. Router registered in app/api/main.py.
+**Kya karta hai:** Listing lifecycle with bundle-scoped uniqueness and status transitions.
+**Files:** `backend/db/006_listings_bundle.sql`, `backend/app/api/routes/listings.py`, `backend/app/repositories/listings.py`, `backend/app/api/main.py`, `backend/tests/test_listings.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_listings.py` pass (happy, unverified 409, duplicate active 409, invalid transition 409, GET items, invalid price 422) via mocked repo; live DB needs Docker.
+
+### [.] T4.3 — Order lifecycle
+
+**Done:** 2026-11-10 16:00 IST — Session 10
+
+**Kya hua:** `backend/app/repositories/orders.py` banaya — `create_order` (buyer KYC VERIFIED, listing LISTED, buyer≠seller, amount=listing price → CREATED; self-buy/unverified/wrong-price 409), `fund_order` (bytes32 validation 422, chain_order_id recomputed via keccak256 per decisions §5 and matched else 422, CREATED→FUNDED, duplicate 409), `get_order`. `backend/app/api/routes/orders.py`: POST /orders (201), POST /orders/{id}/funded, GET /orders/{id} returning order shape with `chain_order_id`. `app/services/chain.py` — pure-Python keccak-256 via pycryptodome (verified against NIST vectors) added to `requirements.txt`. Router registered in app/api/main.py.
+**Kya karta hai:** Order create/fund lifecycle with chain order ID commitment.
+**Files:** `backend/app/repositories/orders.py`, `backend/app/api/routes/orders.py`, `backend/app/api/main.py`, `backend/app/services/chain.py`, `backend/requirements.txt`, `backend/tests/test_orders.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_orders.py` pass (happy, self-buy 409, unverified 409, duplicate funding 409, invalid bytes32 422, chain_order mismatch 422, GET found/missing) via mocked repo; live DB needs Docker.
+
+### [.] T5.1 — 6 checks ka pure rule engine
+
+**Done:** 2026-11-10 16:00 IST — Session 10
+
+**Kya hua:** `backend/app/services/checks.py` banaya — `CheckResult(name, passed, reason, blocking)` dataclass aur 6 pure functions: `check_listed`, `check_bundle_intact`, `check_kyc_wallet`, `check_zoning_ok`, `check_funds_in_escrow`, `check_trade_match`. Sab blocking. `docs/checks.md` banaya — policy, decision mapping (APPROVED/REJECTED/NEEDS_REVIEW), aur demo assumptions. `backend/tests/test_checks.py` — 19 tests (pass/fail per check, 6 check names covered).
+**Kya karta hai:** DB-free six-check rule engine for trade decisions.
+**Files:** `backend/app/services/checks.py`, `docs/checks.md`, `backend/tests/test_checks.py`.
+**Verify:** ruff clean; `pytest -q backend/tests/test_checks.py` pass (19 tests); DB-independent.
+
+### Commit batch C4 — T4.2, T4.3, T5.1
+
+**Message:** `feat(market): add listings, orders and six checks`
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -359,40 +390,6 @@ fake run mat karo.
 
 **Owner:** Backend. Context pack: `docs/context/C4.md`.
 
-### [] T4.2 — Listing create/browse/pause
-
-**Kya karna hai**
-1. `backend/db/006_listings_bundle.sql`: `listings` me `bundle_id BIGINT REFERENCES bundles(id)`;
-   `alu_id` nullable rakho.
-2. Routes: `POST /api/v1/listings` `{bundle_id, seller_wallet, price_wei}`; `GET /api/v1/listings?status=LISTED`;
-   `PATCH /api/v1/listings/{id}` `{status}`.
-3. Rules: seller KYC VERIFIED, bundle ACTIVE, price > 0, ek bundle par ek active listing.
-4. Transitions: `DRAFT→LISTED→PAUSED/CANCELLED`, `PAUSED→LISTED`.
-5. Tests: unverified seller reject, duplicate active listing reject, happy path.
-
-**Files:** `backend/db/006_listings_bundle.sql`, `backend/app/api/routes/listings.py`,
-`backend/app/repositories/listings.py`, `backend/app/api/main.py`, `backend/tests/test_listings.py`.
-**Done criteria:** Demo bundle LISTED ho jaata hai.
-**Verify:** `pytest -q backend/tests/test_listings.py`.
-
-### [] T4.3 — Order lifecycle
-
-**Kya karna hai**
-1. Routes: `POST /api/v1/orders` `{listing_id, buyer_wallet}`; `POST /api/v1/orders/{id}/funded`
-   `{chain_order_id, tx_hash}`; `GET /api/v1/orders/{id}`.
-2. Rules: buyer KYC VERIFIED, listing LISTED, buyer ≠ seller, price listing se match kare.
-   Order `CREATED` par bane; funding proof aane par `FUNDED`.
-3. `chain_order_id` 32-byte hex aur `tx_hash` 32-byte hex validate karo; duplicate funding 409.
-4. Tests: self-buy reject, wrong price reject, double funded reject, happy path.
-
-**Files:** `backend/app/api/routes/orders.py`, `backend/app/repositories/orders.py`,
-`backend/app/api/main.py`, `backend/tests/test_orders.py`.
-**Done criteria:** CREATED → FUNDED order DB me record hota hai.
-**Verify:** `pytest -q backend/tests/test_orders.py`.
-
-### Commit batch C4 — T4.1, T4.2, T4.3
-
-**Message:** `feat(market): add wallet identity, listings and orders`
 
 ---
 
@@ -400,24 +397,6 @@ fake run mat karo.
 
 **Owner split:** `T5.1`, `T5.2`, `T5.3-B` backend; `T5.3-M` middleware. Context pack: `docs/context/C5.md`.
 
-### [] T5.1 — 6 checks ka pure rule engine
-
-**Kya karna hai**
-1. `backend/app/services/checks.py` me har check alag pure function ho, output
-   `CheckResult(name, passed, reason, blocking)`.
-2. Checks exactly ye 6:
-   - `LISTED` — listing status `LISTED` aur order usi listing ka ho.
-   - `BUNDLE_INTACT` — bundle `ACTIVE`, saare ALU maujood, koi ALU kisi doosre active order me na ho.
-   - `KYC_WALLET` — buyer aur seller dono `VERIFIED`.
-   - `ZONING_OK` — evidence me `land_use_zoning` available/partial ho aur restricted/agricultural na ho.
-   - `FUNDS_IN_ESCROW` — order `FUNDED` aur chain state `Funded (1)` ho.
-   - `TRADE_MATCH` — listing, bundle, parcel ULPIN, evidence ULPIN aur buyer/seller match karein.
-3. Rule policy `docs/checks.md` me likho; demo assumptions clearly mark karo.
-4. Unit tests: har check ka pass aur fail case (kam se kam 12 tests).
-
-**Files:** `backend/app/services/checks.py`, `docs/checks.md`, `backend/tests/test_checks.py`.
-**Done criteria:** 6 checks isolated test ho jaate hain, DB ke bina.
-**Verify:** `pytest -q backend/tests/test_checks.py`.
 
 ### [] T5.2 — Evaluate endpoint aur decision policy
 
