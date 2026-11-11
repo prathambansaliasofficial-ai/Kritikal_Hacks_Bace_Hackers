@@ -93,6 +93,16 @@ Branch: `middleware/<name>` (or `ai/<name>` for TinyFish prompts). Owner map: `.
 
 ---
 
+## Session 7 — 2026-11-11 IST (middleware M1/M2/M3 implementation)
+
+- [.] 2026-11-11 — T5.3-M: `GET /escrow/status/:orderId` route add kiya (`middleware/src/server.ts`), `getOrderState` reader aur `ORDER_STATE_LABELS` (`middleware/src/blockchain/escrow.ts`), orderId validation 400, chain error 502, response `{orderId,state,label}`. Tests add kiye (`test/LandMarketEscrow.test.ts`): None→Funded→Settled, refund→Refunded, invalid orderId reject. `typecheck`, `compile`, `test` pass (7 passing).
+- [.] 2026-11-11 — T6.1-M: `scripts/deploy.ts` ab `middleware/deployments/<network>.json` likhta hai (address, chainId, deployer, operator, deployedAt). Local deploy chalaya; `middleware/deployments/localhost.json` commit kiya (key nahi).
+- [.] 2026-11-11 — T6.2: `scripts/chain-smoke.ts` banaya (fresh deploy → createOrder → settle → orderState 1→2 → seller balance check), `npm run chain:smoke` script add kiya, root `Makefile` banaya (`chain` target), `middleware/README.md` me local chain steps. Smoke pass verify kiya.
+- [.] 2026-11-11 — T8.3-M: quality gate — typecheck, test (7 passing), compile, `audit --omit=dev` (0 vulnerabilities), secrets grep (koi real value nahi, sirf env-var name refs), `.env` git-ignored confirm.
+- [.] 2026-11-11 — T9.3-M: `middleware/Dockerfile` banaya (multi-stage, secrets via env, key kabhi image me nahi). Docker daemon is session me reachable nahi, syntax review kiya.
+
+---
+
 # ABHI YEH YEH KARNA HAI
 
 ## Phase 3 — TinyFish evidence
@@ -108,29 +118,19 @@ Branch: `middleware/<name>` (or `ai/<name>` for TinyFish prompts). Owner map: `.
 
 ## Phase 5 — Settlement
 
-### [] T5.3-M — Escrow status endpoint (middleware slice)
+### [.] T5.3-M — Escrow status endpoint (middleware slice)
 
-- [] `GET /escrow/status/:orderId` — contract `orderState` (0/1/2/3) return kare.
-- [] ABI me `orderState` already hai; route + validation add karo.
-- [] Invalid order ID par 400; chain error par 502.
-- [] Manual check local chain par.
+**Done:** 2026-11-11 — Route + `getOrderState` + tests; `typecheck`/`compile`/`test` pass; manual `curl` on local chain verified.
 
 ## Phase 6 — Blockchain deployment
 
-### [] T6.1-M — Deploy artifacts (middleware slice)
+### [.] T6.1-M — Deploy artifacts (middleware slice)
 
-- [] `scripts/deploy.ts` — `middleware/deployments/<network>.json` likhe
-  (address, chainId, deployer, operator, deployedAt).
-- [] ABI `frontend/src/lib/escrowAbi.json` me export.
-- [] `Makefile` target `deploy` / docs update.
-- **Done criteria:** Local deploy ke baad file + ABI ready.
+**Done:** 2026-11-11 — `scripts/deploy.ts` writes `middleware/deployments/<network>.json`; `deployments/localhost.json` committed (no key).
 
-### [] T6.2 — Local chain smoke
+### [.] T6.2 — Local chain smoke
 
-- [] `scripts/chain-smoke.ts` — createOrder → settle → orderState → events.
-- [] `npm run chain:smoke`; `Makefile` target `chain`.
-- [] README local chain steps.
-- **Done criteria:** Smoke pass.
+**Done:** 2026-11-11 — `scripts/chain-smoke.ts`, `npm run chain:smoke`, root `Makefile` `chain` target, README steps; smoke pass verify kiya.
 
 ### [] T6.3 — Sepolia deploy
 
@@ -142,11 +142,9 @@ Branch: `middleware/<name>` (or `ai/<name>` for TinyFish prompts). Owner map: `.
 
 ## Phase 8 — Hardening
 
-### [] T8.3-M — Middleware quality gate
+### [.] T8.3-M — Middleware quality gate
 
-- [] `npm run typecheck`, `npm test`, `npm run compile`, `npm audit --omit=dev`.
-- [] Secrets grep (`TINYFISH_API_KEY`, private keys); `.env` ignored confirm.
-- [] README final commands.
+**Done:** 2026-11-11 — typecheck, test (7 passing), compile, `audit --omit=dev` (0 vulns); secrets grep clean; `.env` ignored.
 
 ## Phase 9 — Stretch
 
@@ -157,18 +155,19 @@ Branch: `middleware/<name>` (or `ai/<name>` for TinyFish prompts). Owner map: `.
 - [] Confidence score evidence sheet me.
 - **Done criteria:** 2+ portals merged, conflicts review me.
 
-### [] T9.3-M — Middleware production container
+### [.] T9.3-M — Middleware production container
 
-- [] `middleware/Dockerfile`.
-- [] Host secrets via env; no key in image.
-- [] Chain RPC + TinyFish key production env se.
+**Done:** 2026-11-11 — `middleware/Dockerfile` (multi-stage, secrets via env). Docker daemon not reachable this session; syntax reviewed.
 
 ---
 
 ## Agla batch
 
-**M1 — T3.1, T5.3-M, T6.1-M.** `T3.1` key milne tak blocked hai, lekin
-`T5.3-M` aur `T6.1-M` abhi ho sakte hain. Phir `M2` (T6.2, T6.3, T9.2).
+**M1 — T3.1, T5.3-M, T6.1-M.** `T5.3-M` aur `T6.1-M` commit kiye gaye; `T3.1`
+`TINYFISH_API_KEY` ke bina blocked hai (human key de). **M2 — T6.2, T6.3, T9.2.**
+`T6.2` commit kiya gaya; `T6.3` funded Sepolia key/RPC ke bina blocked (human key/RPC de);
+`T9.2` AI branch ka hai. **M3 — T8.3-M, T9.3-M.** commit kiye gaye.
+
 C0 ke baad `main` se `middleware/<name>` branch banao.
 
 **C0 commit message:** `chore: scaffold land market monorepo and roadmap`

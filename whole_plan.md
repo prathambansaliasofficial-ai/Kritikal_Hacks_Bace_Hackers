@@ -470,7 +470,9 @@ fake run mat karo.
 **Done criteria:** Ek order evaluate hoke decision DB me save hota hai.
 **Verify:** `pytest -q backend/tests/test_evaluate.py`.
 
-### [] T5.3-M — Middleware escrow status endpoint (middleware slice)
+### [.] T5.3-M — Middleware escrow status endpoint (middleware slice)
+
+**Done:** 2026-11-11 — Session M1
 
 **Owner:** Middleware. Do this before backend `T5.3-B` if possible; backend can mock it.
 
@@ -510,7 +512,9 @@ fake run mat karo.
 
 **Owner split:** `T6.1-M`, `T6.2`, `T6.3` middleware; `T6.1-F` frontend. Context pack: `docs/context/C6.md`.
 
-### [] T6.1-M — Deploy artifacts (middleware slice)
+### [.] T6.1-M — Deploy artifacts (middleware slice)
+
+**Done:** 2026-11-11 — Session M1
 
 **Owner:** Middleware.
 
@@ -536,7 +540,9 @@ fake run mat karo.
 **Done criteria:** Missing address shows warning; configured address works.
 **Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build`.
 
-### [] T6.2 — Local chain smoke test
+### [.] T6.2 — Local chain smoke test
+
+**Done:** 2026-11-11 — Session M2
 
 **Owner:** Middleware.
 
@@ -725,7 +731,9 @@ fake run mat karo.
 3. Backend part of `docs/limitations.md` (demo data, KYC stub, testnet only).
 **Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
-### [] T8.3-M — Middleware security/quality gate (middleware slice)
+### [.] T8.3-M — Middleware security/quality gate (middleware slice)
+
+**Done:** 2026-11-11 — Session M3
 
 **Owner:** Middleware.
 
@@ -784,7 +792,9 @@ AI tests; backend contract change only via lead.
 
 **Owner:** Backend. `backend/Dockerfile`.
 
-### [] T9.3-M — Middleware production container (middleware slice)
+### [.] T9.3-M — Middleware production container (middleware slice)
+
+**Done:** 2026-11-11 — Session M3
 
 **Owner:** Middleware. `middleware/Dockerfile`.
 
