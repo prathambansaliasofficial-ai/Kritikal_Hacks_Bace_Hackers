@@ -248,3 +248,10 @@ Branch: `backend/<name>` only. Owner map: `../docs/task-ownership.md`.
 Commit message: `feat(db): add postgis checks, db helpers and demo seed`
 Pehle lead ka `C0` baseline commit aane do, phir `git switch main && git pull` karke
 `backend/<name>` branch banao. Do not push `main`.
+
+## NEEDS FROM OTHER MODULE
+
+Format: `- [] needs: <target module> | what: <endpoint/field/behaviour> | contract ref: <§> | requested by: <session>`
+Mark `[.]` when the other module delivered it.
+
+(none yet)

@@ -78,9 +78,33 @@ npm --prefix frontend run build
 npm --prefix frontend run preview
 ```
 
+## 6. Session start protocol (review loop)
+
+Har session in exact order mein chale:
+
+**(a) RESOLVE** — Pichle session ke open review comments `frontend/review-f.md` mein theek karo. Har comment ke liye fix commit hash likho aur `Status: RESOLVED` set karo. `[BLOCKER]` comments pehle resolve karo, tabhi naya task start karo.
+
+**(b) REVIEW** — Pichle session ka `frontend/` kaam review karo. Code par **READ-ONLY**: reviewer sirf `frontend/review-f.md` edit karegi, source code nahi. Asli `git diff <range>` unreviewed commit range ka padhegi, author's log nahi. `npm --prefix frontend run typecheck` aur `npm --prefix frontend run build` chala sakti hai (source mein koi edit nahi).
+
+**(c) WORK** — Plan ka aagla frontend task karo.
+
+**(d) LOG** — `frontend/log-f.md` update karo aaj ki date/time/session ke saath.
+
+Review entry template (`frontend/review-f.md` header mein ye format rakhein):
+
+```
+## R-<n> — reviewing <author-session-id> (commit <abc123>..<def456>) — by <reviewer-session-id>
+Checked: <kya actually kiya gaya: diff read, typecheck/build aur result, kaunsa api-contract.md section compare kiya>
+- [BLOCKER|MAJOR|NIT] <file>:<line> — <problem + why>. Expected: <contract/rule>
+Verdict: CHANGES_REQUESTED | APPROVED
+Status: OPEN | RESOLVED (fixed in <hash>)
+```
+
+Review file ke top par pointer: `Last reviewed commit: <hash>`. Reviewer source code nahi edit karti; sirf `review-f.md`. Review fix commit message: `fix(scope): resolve R-<n>` (rule 2 ka apvaad).
+
 To test against live services, start backend and middleware first (see `SETUP.md`).
 
-## 6. Definition of done
+## 7. Definition of done
 
 - [ ] Code uses only documented endpoints and enums.
 - [ ] `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
@@ -91,7 +115,7 @@ To test against live services, start backend and middleware first (see `SETUP.md
 - [ ] `npm run sync:docs && npm run check:docs` pass.
 - [ ] Commit uses the batch message from `docs/task-ownership.md`.
 
-## 7. Stop conditions
+## 8. Stop conditions
 
 Stop and write `**BLOCKED:**` in the task block + log if:
 

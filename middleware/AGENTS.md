@@ -101,7 +101,31 @@ npm --prefix middleware run node
 npm --prefix middleware run deploy:local
 ```
 
-## 6. Definition of done
+## 6. Session start protocol (review loop)
+
+Har session in exact order mein chale:
+
+**(a) RESOLVE** — Pichle session ke open review comments `middleware/review-m.md` mein theek karo. Har comment ke liye fix commit hash likho aur `Status: RESOLVED` set karo. `[BLOCKER]` comments pehle resolve karo, tabhi naya task start karo.
+
+**(b) REVIEW** — Pichle session ka `middleware/` kaam review karo. Code par **READ-ONLY**: reviewer sirf `middleware/review-m.md` edit karegi, source code nahi. Asli `git diff <range>` unreviewed commit range ka padhegi, author's log nahi. `npm --prefix middleware run typecheck`, `npm --prefix middleware run compile`, `npm --prefix middleware test` chala sakti hai (source mein koi edit nahi).
+
+**(c) WORK** — Plan ka aagla middleware task karo.
+
+**(d) LOG** — `middleware/log-m.md` update karo aaj ki date/time/session ke saath.
+
+Review entry template (`middleware/review-m.md` header mein ye format rakhein):
+
+```
+## R-<n> — reviewing <author-session-id> (commit <abc123>..<def456>) — by <reviewer-session-id>
+Checked: <kya actually kiya gaya: diff read, typecheck/compile/test aur result, kaunsa api-contract.md section compare kiya>
+- [BLOCKER|MAJOR|NIT] <file>:<line> — <problem + why>. Expected: <contract/rule>
+Verdict: CHANGES_REQUESTED | APPROVED
+Status: OPEN | RESOLVED (fixed in <hash>)
+```
+
+Review file ke top par pointer: `Last reviewed commit: <hash>`. Reviewer source code nahi edit karti; sirf `review-m.md`. Review fix commit message: `fix(scope): resolve R-<n>` (rule 2 ka apvaad).
+
+## 7. Definition of done
 
 - [ ] Code matches the task block and `docs/api-contract.md`.
 - [ ] `typecheck`, `compile`, and `test` pass.
@@ -112,7 +136,7 @@ npm --prefix middleware run deploy:local
 - [ ] `npm run sync:docs && npm run check:docs` pass.
 - [ ] Commit uses the batch message from `docs/task-ownership.md`.
 
-## 7. Stop conditions
+## 8. Stop conditions
 
 Stop and write `**BLOCKED:**` in the task block + log if:
 
