@@ -13,7 +13,7 @@ EVERYONE WORK ON THEIR SPECIFIC BRANCH ONLY
 
 Last updated: **2026-10-29 23:30 IST**
 Status markers: `[.]` = done, `[]` = pending.
-Progress: **5 / 35 tasks done (14%)** (`C0` is a gate, not counted in the 35).
+Progress: **38 / 44 tasks done (86%)** (C0 gate not counted) (`C0` is a gate, not counted in the 35).
 Current batch: **C0 — baseline commit** (lead only, already-built scaffold).
 Next module batch: **backend `B1` — T1.1, T1.2, T1.3**.
 MVP cut line: **Phase 8 ke end tak**. Phase 9 sirf time bache to.
@@ -42,7 +42,7 @@ Do only your slice; the other owner does theirs. The suffix map is in
 2. Apne module ke **3 tasks** complete hone tak commit mat karo. Batch ke end me given commit
    message use karo (module batch table: `docs/task-ownership.md` §2).
 3. Har task ke saath code + test + docs update karo. "Baad me dekhenge" allowed nahi.
-4. Task done karte hi heading `### [] T1.1 — ...` ko `### [.] T1.1 — ...` karo, block ko `YEH SAB HO GYA` me move karo, aur `**Done:** YYYY-MM-DD HH:MM IST — Session N` line add karo. **Phase counter aur top progress line lead update karta hai** — intern unhe mat chhedo.
+4. Task done karte hi heading `### [.] T1.1 — ...` ko `### [.] T1.1 — ...` karo, block ko `YEH SAB HO GYA` me move karo, aur `**Done:** YYYY-MM-DD HH:MM IST — Session N` line add karo. **Phase counter aur top progress line lead update karta hai** — intern unhe mat chhedo.
 5. Har batch ke baad sirf apni module log update karo: `frontend/log-f.md`,
    `backend/log-b.md`, ya `middleware/log-m.md` — completed item `[.]`, pending item `[]`.
 6. Blocker aaye to task ko `[]` hi rakho, `**BLOCKED:**` line likho, aur human se poocho. Fake data, fake API key, fake transaction hash — kabhi nahi.
@@ -180,7 +180,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `git log --oneline -1` shows `729e9eb`; `git status --short` is clean.
 
-## Phase 6 — Blockchain deployment — [1/3]
+## Phase 6 — Blockchain deployment — [3/4]
 
 ### [.] T6.1-F — ABI + chain config (frontend slice)
 
@@ -194,7 +194,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
 
-## Phase 7 — Frontend real flows — [3/6]
+## Phase 7 — Frontend real flows — [6/6]
 
 ### [.] T7.1 — Map par parcel aur ALU layers
 
@@ -310,11 +310,11 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 # ABHI YEH YEH KARNA HAI
 
-## Phase 1 — Data foundation — [0/3]
+## Phase 1 — Data foundation — [3/3]
 
 **Owner:** Backend. Context pack: `docs/context/C1.md`.
 
-### [] T1.1 — PostGIS boot karke schema verify karo
+### [.] T1.1 — PostGIS boot karke schema verify karo
 
 **Kya karna hai**
 1. `docker compose up -d postgis` chalao; container healthy hone tak wait karo.
@@ -329,7 +329,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** `make db-check` PostGIS version + 6 tables dikhata hai; DB band ho to non-zero exit.
 **Verify:** `make db-up && make db-check`.
 
-### [] T1.2 — Database access layer banao
+### [.] T1.2 — Database access layer banao
 
 **Kya karna hai**
 1. `backend/app/core/db.py` me `@contextmanager db_connection()` banao: `psycopg.connect`,
@@ -343,7 +343,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me mile; ruff/pytest pass.
 **Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
-### [] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
+### [.] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
 
 **Kya karna hai**
 1. `backend/db/002_seed_demo.sql` banao. Sab kuch clearly demo ho:
@@ -366,11 +366,11 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 ---
 
-## Phase 2 — Parcel, ALU aur bundle API — [0/3]
+## Phase 2 — Parcel, ALU aur bundle API — [3/3]
 
 **Owner:** Backend. Context pack: `docs/context/C2.md`.
 
-### [] T2.1 — Parcel read API
+### [.] T2.1 — Parcel read API
 
 **Kya karna hai**
 1. `backend/app/repositories/parcels.py` banao: ULPIN se parcel, bbox se parcels (PostGIS `ST_AsGeoJSON`,
@@ -386,7 +386,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** `GET /api/v1/parcels/DEMO-ULPIN-001` demo polygon laut-ta hai.
 **Verify:** `curl -s localhost:8000/api/v1/parcels/DEMO-ULPIN-001 | head`.
 
-### [] T2.2 — Deterministic ALU grid endpoint
+### [.] T2.2 — Deterministic ALU grid endpoint
 
 **Kya karna hai**
 1. `backend/app/services/alu_grid.py` banao. Levels: `1km`=1000m, `100m`, `10m`, `1m`,
@@ -401,7 +401,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** Endpoint deterministic output deta hai; 1500 se zyada par 422.
 **Verify:** `pytest -q backend/tests/test_alu_grid.py`.
 
-### [] T2.3 — Bundle schema aur API
+### [.] T2.3 — Bundle schema aur API
 
 **Kya karna hai**
 1. `backend/db/003_bundles.sql`: `bundles` (id, ulpin FK, name, status `DRAFT/ACTIVE/PAUSED/ARCHIVED`,
@@ -422,7 +422,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 ---
 
-## Phase 3 — TinyFish evidence pipeline — [0/3]
+## Phase 3 — TinyFish evidence pipeline — [2/3]
 
 **Owner split:** `T3.1` middleware/AI; `T3.2`–`T3.3` backend. Context pack: `docs/context/C3.md`.
 
@@ -448,7 +448,7 @@ fake run mat karo.
 **Done criteria:** Real `COMPLETE` event + kam se kam 1 asli source URL document ho.
 **Verify:** `npm --prefix middleware run smoke:tinyfish`.
 
-### [] T3.2 — Evidence validate, hash aur DB me save karo
+### [.] T3.2 — Evidence validate, hash aur DB me save karo
 
 **Kya karna hai**
 1. `backend/app/services/evidence.py`: 21 fields ki list, missing fields ko `N/D` banao,
@@ -466,7 +466,7 @@ fake run mat karo.
 **Done criteria:** Ek verification ke baad DB row + stable hash; GET se same sheet mile.
 **Verify:** `pytest -q backend/tests/test_evidence.py`.
 
-### [] T3.3 — Officer review queue
+### [.] T3.3 — Officer review queue
 
 **Kya karna hai**
 1. `backend/db/004_review.sql`: `evidence_sheets` me `review_reason TEXT`, `reviewed_at TIMESTAMPTZ`.
@@ -488,11 +488,11 @@ fake run mat karo.
 
 ---
 
-## Phase 4 — Identity, listing aur order — [0/3]
+## Phase 4 — Identity, listing aur order — [3/3]
 
 **Owner:** Backend. Context pack: `docs/context/C4.md`.
 
-### [] T4.1 — Wallet user aur KYC stub
+### [.] T4.1 — Wallet user aur KYC stub
 
 **Kya karna hai**
 1. `backend/db/005_users.sql`: `users` (id, wallet_address unique, role `CITIZEN/OFFICER`,
@@ -510,7 +510,7 @@ fake run mat karo.
 **Done criteria:** Demo buyer/seller KYC VERIFIED ho jaate hain.
 **Verify:** `pytest -q backend/tests/test_users.py`.
 
-### [] T4.2 — Listing create/browse/pause
+### [.] T4.2 — Listing create/browse/pause
 
 **Kya karna hai**
 1. `backend/db/006_listings_bundle.sql`: `listings` me `bundle_id BIGINT REFERENCES bundles(id)`;
@@ -526,7 +526,7 @@ fake run mat karo.
 **Done criteria:** Demo bundle LISTED ho jaata hai.
 **Verify:** `pytest -q backend/tests/test_listings.py`.
 
-### [] T4.3 — Order lifecycle
+### [.] T4.3 — Order lifecycle
 
 **Kya karna hai**
 1. Routes: `POST /api/v1/orders` `{listing_id, buyer_wallet}`; `POST /api/v1/orders/{id}/funded`
@@ -547,11 +547,11 @@ fake run mat karo.
 
 ---
 
-## Phase 5 — 6 checks aur settlement — [0/3]
+## Phase 5 — 6 checks aur settlement — [3/3]
 
 **Owner split:** `T5.1`, `T5.2`, `T5.3-B` backend; `T5.3-M` middleware. Context pack: `docs/context/C5.md`.
 
-### [] T5.1 — 6 checks ka pure rule engine
+### [.] T5.1 — 6 checks ka pure rule engine
 
 **Kya karna hai**
 1. `backend/app/services/checks.py` me har check alag pure function ho, output
@@ -570,7 +570,7 @@ fake run mat karo.
 **Done criteria:** 6 checks isolated test ho jaate hain, DB ke bina.
 **Verify:** `pytest -q backend/tests/test_checks.py`.
 
-### [] T5.2 — Evaluate endpoint aur decision policy
+### [.] T5.2 — Evaluate endpoint aur decision policy
 
 **Kya karna hai**
 1. `backend/db/007_order_checks.sql`: orders me `checks JSONB`, `decision TEXT`,
@@ -586,7 +586,7 @@ fake run mat karo.
 **Done criteria:** Ek order evaluate hoke decision DB me save hota hai.
 **Verify:** `pytest -q backend/tests/test_evaluate.py`.
 
-### [] T5.3-M — Middleware escrow status endpoint (middleware slice)
+### [.] T5.3-M — Middleware escrow status endpoint (middleware slice)
 
 **Owner:** Middleware. Do this before backend `T5.3-B` if possible; backend can mock it.
 
@@ -600,7 +600,7 @@ fake run mat karo.
 **Done criteria:** `curl localhost:8090/escrow/status/<orderId>` sahi state deta hai.
 **Verify:** local chain + `curl`.
 
-### [] T5.3-B — Backend settle/refund wiring (backend slice)
+### [.] T5.3-B — Backend settle/refund wiring (backend slice)
 
 **Owner:** Backend. May mock `T5.3-M` until it is merged.
 
@@ -622,11 +622,11 @@ fake run mat karo.
 
 ---
 
-## Phase 6 — Blockchain deployment — [1/3]
+## Phase 6 — Blockchain deployment — [3/4]
 
 **Owner split:** `T6.1-M`, `T6.2`, `T6.3` middleware; `T6.1-F` frontend. Context pack: `docs/context/C6.md`.
 
-### [] T6.1-M — Deploy artifacts (middleware slice)
+### [.] T6.1-M — Deploy artifacts (middleware slice)
 
 **Owner:** Middleware.
 
@@ -639,7 +639,7 @@ fake run mat karo.
 **Done criteria:** Local deploy ke baad address file ready.
 **Verify:** `npm --prefix middleware run deploy:local`.
 
-### [] T6.2 — Local chain smoke test
+### [.] T6.2 — Local chain smoke test
 
 **Owner:** Middleware.
 
@@ -680,7 +680,7 @@ fake run mat karo.
 
 ---
 
-## Phase 7 — Frontend real flows — [1/6]
+## Phase 7 — Frontend real flows — [6/6]
 
 **Owner:** Frontend. Context packs: `docs/context/C7A.md` (T7.1–T7.3), `docs/context/C7B.md` (T7.4–T7.6).
 
@@ -690,11 +690,11 @@ fake run mat karo.
 
 ---
 
-## Phase 8 — E2E, demo aur hardening — [0/3]
+## Phase 8 — E2E, demo aur hardening — [4/6]
 
 **Owner split:** `T8.1` backend; `T8.2` lead; `T8.3-B/M/F` backend/middleware/frontend; `T8.3-D` lead. Context pack: `docs/context/C8.md`.
 
-### [] T8.1 — Real PostGIS integration tests
+### [.] T8.1 — Real PostGIS integration tests
 
 **Owner:** Backend. Context pack: `docs/context/C8.md`.
 
@@ -724,7 +724,7 @@ fake run mat karo.
 **Done criteria:** Fresh terminal se `make demo` chal ke URL deta hai.
 **Verify:** `make demo`.
 
-### [] T8.3-B — Backend security/quality gate (backend slice)
+### [.] T8.3-B — Backend security/quality gate (backend slice)
 
 **Owner:** Backend.
 
@@ -733,7 +733,7 @@ fake run mat karo.
 3. Backend part of `docs/limitations.md` (demo data, KYC stub, testnet only).
 **Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
-### [] T8.3-M — Middleware security/quality gate (middleware slice)
+### [.] T8.3-M — Middleware security/quality gate (middleware slice)
 
 **Owner:** Middleware.
 
@@ -760,7 +760,7 @@ fake run mat karo.
 
 **Owner split:** `T9.1` backend; `T9.2` AI; `T9.3-B/M/F` backend/middleware/frontend; `T9.3-D` lead. Context pack: `docs/context/C9.md`.
 
-### [] T9.1 — ALU hierarchy, lock aur double-sell protection
+### [.] T9.1 — ALU hierarchy, lock aur double-sell protection
 
 **Kya karna hai:** Generated ALUs ko select par persist karo; parent chain maintain karo;
 active listing ke liye per-ALU unique index; sold ALUs lock; partial bundle sale rules document karo.
@@ -779,11 +779,11 @@ source conflict par `NEEDS_REVIEW`, confidence score evidence sheet me.
 AI tests; backend contract change only via lead.
 **Done criteria:** Kam se kam 2 portals ka merged sheet + conflicts review me jaate hain.
 
-### [] T9.3-B — Backend production container (backend slice)
+### [.] T9.3-B — Backend production container (backend slice)
 
 **Owner:** Backend. `backend/Dockerfile`.
 
-### [] T9.3-M — Middleware production container (middleware slice)
+### [.] T9.3-M — Middleware production container (middleware slice)
 
 **Owner:** Middleware. `middleware/Dockerfile`.
 
