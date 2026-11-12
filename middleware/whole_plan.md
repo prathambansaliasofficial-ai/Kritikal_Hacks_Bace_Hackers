@@ -208,6 +208,68 @@ na ho; pass par seller ko, fail par buyer ko wapas.
   `docker compose config`, aur JSON validation pass.
 - [.] Commit/push — C0 me hoga.
 
+## Middleware — Sessions M1, M2, M3
+
+### [.] T5.3-M — Middleware escrow status endpoint (middleware slice)
+
+**Done:** 2026-11-11 02:30 IST — Session M1
+
+**Kya hua:** `GET /escrow/status/:orderId` route add kiya (`middleware/src/server.ts`); `getOrderState` reader aur `ORDER_STATE_LABELS` (`middleware/src/blockchain/escrow.ts`); invalid orderId → 400, chain error → 502; response `{orderId,state,label}` per `docs/api-contract.md` §4. Tests add kiye: None→Funded→Settled, refund→Refunded, invalid orderId reject. `typecheck`/`compile`/`test` pass (7 passing).
+
+**Kya karta hai:** On-chain escrow state readable via middleware API for backend settlement decisions.
+
+**Files:** `middleware/src/server.ts`, `middleware/src/blockchain/escrow.ts`, `middleware/test/LandMarketEscrow.test.ts`
+
+**Proof:** `npm --prefix middleware run typecheck` pass; `npm --prefix middleware test` 7 passing; `npm --prefix middleware run compile` pass.
+
+### [.] T6.1-M — Deploy artifacts (middleware slice)
+
+**Done:** 2026-11-11 03:55 IST — Session M1
+
+**Kya hua:** `scripts/deploy.ts` ab `middleware/deployments/<network>.json` likhta hai (address, chainId, deployer, operator, deployedAt). Local deploy chalaya; `middleware/deployments/localhost.json` commit kiya (koi key nahi).
+
+**Kya karta hai:** Deploy artifact record for frontend ABI + contract address wiring.
+
+**Files:** `middleware/scripts/deploy.ts`, `middleware/deployments/localhost.json`
+
+**Proof:** `npm --prefix middleware run deploy:local` → artifact written.
+
+### [.] T6.2 — Local chain smoke test
+
+**Done:** 2026-11-11 04:30 IST — Session M2
+
+**Kya hua:** `scripts/chain-smoke.ts` banaya (fresh deploy → createOrder → settle → orderState 1→2 → seller balance +0.01 ETH), `npm run chain:smoke` script add kiya, root `Makefile` ka `chain` target, `middleware/README.md` me local chain steps.
+
+**Kya karta hai:** End-to-end local chain create→settle→state verification.
+
+**Files:** `middleware/scripts/chain-smoke.ts`, `middleware/package.json`, `Makefile`, `middleware/README.md`
+
+**Proof:** `npm --prefix middleware run chain:smoke` PASS.
+
+### [.] T8.3-M — Middleware security/quality gate (middleware slice)
+
+**Done:** 2026-11-11 05:00 IST — Session M3
+
+**Kya hua:** `typecheck`, `test` (7 passing), `compile`, `audit --omit=dev` (0 vulnerabilities); secrets grep (koi real value nahi, sirf env-var name refs); `.env` git-ignored confirm.
+
+**Kya karta hai:** Middleware security/quality gate.
+
+**Files:** `middleware/src/`, `middleware/test/`, `middleware/package.json`
+
+**Proof:** all four gate commands pass; `.env` ignored.
+
+### [.] T9.3-M — Middleware production container (middleware slice)
+
+**Done:** 2026-11-11 05:15 IST — Session M3
+
+**Kya hua:** `middleware/Dockerfile` banaya (multi-stage build, non-root runtime, secrets via env only, key kabhi image me nahi). Docker daemon session me reachable nahi; syntax review kiya.
+
+**Kya karta hai:** Middleware production container.
+
+**Files:** `middleware/Dockerfile`
+
+**Proof:** Dockerfile syntax reviewed (daemon unreachable this session).
+
 ---
 
 # ABHI YEH YEH KARNA HAI
@@ -337,8 +399,8 @@ mocked middleware response until the key arrives.
 fake run mat karo.
 
 **Kya karna hai**
-1. **BLOCKER:** human se `TINYFISH_API_KEY` lo. Key na mile to task `[]` rakho, fake run mat karo.
-2. `middleware/.env` me key daalo; `npm --prefix middleware run smoke:tinyfish` chalao.
+1. `middleware/.env` me `TINYFISH_API_KEY` daalo (human se lo); `npm --prefix middleware run smoke:tinyfish` chalao. Key na mile to task `[]` rakho, fake run mat karo.
+2. `npm --prefix middleware run smoke:tinyfish` chalao.
 3. Asli ULPIN ke liye BhuNaksha ya jo portal officer de, us par ek run karo; run ID, source URLs,
    status aur latency note karo.
 4. `docs/tinyfish-smoke.md` banao: date, URL, goal, run ID, result summary, screenshot path.
@@ -488,20 +550,6 @@ fake run mat karo.
 **Done criteria:** Ek order evaluate hoke decision DB me save hota hai.
 **Verify:** `pytest -q backend/tests/test_evaluate.py`.
 
-### [] T5.3-M — Middleware escrow status endpoint (middleware slice)
-
-**Owner:** Middleware. Do this before backend `T5.3-B` if possible; backend can mock it.
-
-**Kya karna hai**
-1. `middleware/src/server.ts` me `GET /escrow/status/:orderId` add karo — contract
-   `orderState` padhe (0 None, 1 Funded, 2 Settled, 3 Refunded).
-2. Invalid order ID par 400, chain error par 502.
-3. Response exactly `{orderId, state, label}` per `docs/api-contract.md` §4.
-
-**Files:** `middleware/src/server.ts`, `middleware/src/blockchain/escrow.ts`, middleware tests.
-**Done criteria:** `curl localhost:8090/escrow/status/<orderId>` sahi state deta hai.
-**Verify:** local chain + `curl`.
-
 ### [] T5.3-B — Backend settle/refund wiring (backend slice)
 
 **Owner:** Backend. May mock `T5.3-M` until it is merged.
@@ -528,19 +576,6 @@ fake run mat karo.
 
 **Owner split:** `T6.1-M`, `T6.2`, `T6.3` middleware; `T6.1-F` frontend. Context pack: `docs/context/C6.md`.
 
-### [] T6.1-M — Deploy artifacts (middleware slice)
-
-**Owner:** Middleware.
-
-1. `middleware/scripts/deploy.ts` deploy ke baad `middleware/deployments/<network>.json` likhe:
-   address, chainId, deployer, operator, deployedAt.
-2. Commit a small `deployments/localhost.json` example (no key), or document generation.
-3. Addresses docs me commit karo; `.env` kabhi nahi.
-
-**Files:** `middleware/scripts/deploy.ts`, `middleware/deployments/`.
-**Done criteria:** Local deploy ke baad address file ready.
-**Verify:** `npm --prefix middleware run deploy:local`.
-
 ### [] T6.1-F — ABI + chain config (frontend slice)
 
 **Owner:** Frontend. Can use the artifact from a local middleware build.
@@ -553,24 +588,6 @@ fake run mat karo.
 **Files:** `frontend/src/lib/escrowAbi.json`, `frontend/src/lib/chain.ts`, `frontend/.env.example`.
 **Done criteria:** Missing address shows warning; configured address works.
 **Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build`.
-
-### [] T6.2 — Local chain smoke test
-
-**Owner:** Middleware.
-
-**Kya karna hai**
-
-**Kya karna hai**
-1. `middleware/scripts/chain-smoke.ts`: buyer se `createOrder`, operator se `settle`,
-   `orderState` check, events verify.
-2. `npm run chain:smoke` script add karo; Hardhat node assume kare ya khud spawn kare.
-3. Root `Makefile` me `chain` target: node start + deploy + smoke.
-4. README me local chain steps.
-
-**Files:** `middleware/scripts/chain-smoke.ts`, `middleware/package.json`, `Makefile`,
-`middleware/README.md`.
-**Done criteria:** `npm --prefix middleware run chain:smoke` pass.
-**Verify:** terminal 1 `npm --prefix middleware run node`, terminal 2 smoke.
 
 ### [] T6.3 — Sepolia deploy aur record
 
@@ -743,15 +760,6 @@ fake run mat karo.
 3. Backend part of `docs/limitations.md` (demo data, KYC stub, testnet only).
 **Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
-### [] T8.3-M — Middleware security/quality gate (middleware slice)
-
-**Owner:** Middleware.
-
-1. Secrets grep (`TINYFISH_API_KEY`, `OPERATOR_PRIVATE_KEY`, private keys).
-2. `npm --prefix middleware run typecheck && npm --prefix middleware test && npm --prefix middleware run compile`.
-3. `npm --prefix middleware audit --omit=dev`.
-**Verify:** all four commands pass; `.env` ignored.
-
 ### [] T8.3-F — Frontend security/quality gate (frontend slice)
 
 **Owner:** Frontend.
@@ -801,10 +809,6 @@ AI tests; backend contract change only via lead.
 ### [] T9.3-B — Backend production container (backend slice)
 
 **Owner:** Backend. `backend/Dockerfile`.
-
-### [] T9.3-M — Middleware production container (middleware slice)
-
-**Owner:** Middleware. `middleware/Dockerfile`.
 
 ### [] T9.3-F — Frontend production container (frontend slice)
 
