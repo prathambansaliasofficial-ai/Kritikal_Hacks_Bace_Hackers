@@ -152,3 +152,60 @@ you need. A blocked task stays `[]`; never fake progress.
 - Only Hardhat account #0 dev key may appear in docs as an example.
 - No mainnet, no real money, no legal title transfer.
 - Never claim demo data is official government data.
+
+## 10. Review loop (process + template + archive)
+
+**Session** = ek AI run ek module mein. Har session is exact order mein chale:
+
+**(a) RESOLVE** — Pichle session ke open review comments theek karo. Har comment ke liye fix commit hash likho aur `Status: RESOLVED` set karo. `[BLOCKER]` comments pehle resolve hone chahiye, tabhi step (c) start ho.
+
+**(b) REVIEW** — Pichle session ka kaam review karo. Code par **READ-ONLY**: reviewer sirf apni module ki review file edit karega, source code nahi. Reviewer asli `git diff <range>` padhegi unreviewed commit range ki, author's log nahi. Reviewer typecheck/build/tests chala sakti hai (source mein koi edit nahi).
+
+**(c) WORK** — Plan ka aagla task(karo).
+
+**(d) LOG** — Apne module log (`log-f/b/m.md`) update karo aaj ki date/time/session ke saath.
+
+### Review entry template (har module ki review file mein header mein ye format rakhein)
+
+```
+## R-<n> — reviewing <author-session-id> (commit <abc123>..<def456>) — by <reviewer-session-id>
+Checked: <kya actually kiya gaya: diff read, typecheck/build/tests aur result, kaunsa api-contract.md section compare kiya>
+- [BLOCKER|MAJOR|NIT] <file>:<line> — <problem + why>. Expected: <contract/rule>
+Verdict: CHANGES_REQUESTED | APPROVED
+Status: OPEN | RESOLVED (fixed in <hash>)
+```
+
+Review file ke top par ye pointer rakhein: `Last reviewed commit: <hash>`.
+
+### Review rules
+
+1. Evidence, not logs: reviewer `git diff` / commit range padhti hai.
+2. "No mistakes" sirf proof ke saath allowed hai. Har review mein `Checked:` line honi chahiye. Bina `Checked:` wali review invalid hai.
+3. Har comment par severity: `[BLOCKER]` / `[MAJOR]` / `[NIT]`. Open `[BLOCKER]` = naya task start nahi. Verdict: `APPROVED` ya `CHANGES_REQUESTED`.
+4. Kram `(a) → (b) → (c) → (d)` ka palan ho, taaki ek-session ki deri na ho.
+5. Review files module ke andar: `frontend/review-f.md`, `backend/review-b.md`, `middleware/review-m.md`. Archive rule: jo entry `RESOLVED`/`APPROVED` ho aur pichle 5 entries se purani ho, use `<module>/archive/review-<x>-YYYY-MM.md` mein move karo taaki AI context chhota rahe. Archive files default mein nahi padhi jati.
+
+### Worked example
+
+Session 1 (middleware) commit `abc123` mein `GET /escrow/status` add karta hai. Session 2 (middleware reviewer) entry likhti hai:
+
+```
+## R-1 — reviewing session-M1 (commit abc123..def456) — by session-M2
+Checked: git diff abc123..def456 pada; `npm --prefix middleware run typecheck` pass; `npm --prefix middleware test` 7 passing; `docs/api-contract.md` §4 `{orderId,state,label}` match kiya.
+- [NIT] middleware/src/server.ts:45 — error body key "error" hai par message mein full stop nahi; contract `{"error": string}` match karta hai, thik hai.
+Verdict: APPROVED
+Status: RESOLVED
+```
+
+### Review fix commit exception
+
+Rule 2 (3 tasks ke baad commit) ka apvaad review comment fixes ke liye allowed hai: `fix(scope): resolve R-<n>` message use karein taaki fix commit hash review entry mein record ho sake.
+
+## 11. Cross-module needs (explicit sync)
+
+Kyunki modules real-time sync nahi karte, har module log mein `## NEEDS FROM OTHER MODULE` section jodhein. Format pr line:
+
+`- [] needs: <target module> | what: <endpoint/field/behaviour> | contract ref: <§> | requested by: <session>`
+
+Delivery hone par `[.]` karo. `npm run sync:docs` inko `<module>/docs/cross-module-needs.md` mein collect karega taaki har module apne docs mein doosre module ki demands dekh sake (root nahi padhna padega). `docs/api-contract.md` sirf source of truth rahegi shapes ke liye; contract-change wala need lead se approve karna hoga.
+
