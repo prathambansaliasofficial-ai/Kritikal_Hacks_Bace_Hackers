@@ -1,29 +1,69 @@
-.PHONY: node deploy:local chain:smoke chain dev mid check install
+.PHONY: db-up db-check db-reset seed api mid web check node deploy:local chain:smoke chain dev install mid-check
 
-node: ## Start local Hardhat node (terminal 1)
+COMPOSE ?= docker compose
+
+# --- database --------------------------------------------------------------
+
+db-up:
+	docker compose up -d postgis
+
+db-check:
+	PYTHONPATH=backend python backend/scripts/check_db.py
+
+db-reset:
+	@read -p "This deletes the PostGIS volume and ALL data. Continue? [y/N] " confirm; \
+	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then echo "db-reset aborted"; exit 1; fi
+	docker compose down -v
+	docker compose up -d postgis
+
+# --- demo seed -------------------------------------------------------------
+
+seed:
+	PYTHONPATH=backend python backend/scripts/seed.py
+
+# --- services --------------------------------------------------------------
+
+api:
+	backend/.venv/bin/uvicorn app.api.main:app --app-dir backend --reload --port 8000
+
+mid:
+	npm run dev:middleware
+
+web:
+	npm run dev:frontend
+
+# --- middleware ------------------------------------------------------------
+
+node:
 	npm --prefix middleware run node
 
-deploy:local: ## Deploy escrow to local chain (terminal 2)
+deploy:local:
 	npm --prefix middleware run deploy:local
 
-chain:smoke: ## Run createOrder -> settle -> orderState smoke test
+chain:smoke:
 	npm --prefix middleware run chain:smoke
 
-chain: deploy:local chain:smoke ## Full local chain flow: deploy + smoke (node must be running)
+chain: deploy:local chain:smoke
 
-dev: ## Start middleware API (http://127.0.0.1:8090)
+dev:
 	npm --prefix middleware run dev
 
-mid: ## typecheck + compile + test for middleware
-	npm --prefix middleware run typecheck
-	npm --prefix middleware run compile
-	npm --prefix middleware test
-
-install: ## Install middleware dependencies
+install:
 	npm --prefix middleware install
 
-check: ## Middleware quality gate (typecheck, test, compile, prod audit)
+# --- middleware quality gate -----------------------------------------------
+
+mid-check:
 	npm --prefix middleware run typecheck
 	npm --prefix middleware test
 	npm --prefix middleware run compile
 	npm --prefix middleware audit --omit=dev
+
+# --- backend checks --------------------------------------------------------
+
+check:
+	backend/.venv/bin/ruff check backend
+	backend/.venv/bin/pytest -q backend
+
+test-integration:
+	backend/.venv/bin/pytest -m integration -q backend -o addopts=""
