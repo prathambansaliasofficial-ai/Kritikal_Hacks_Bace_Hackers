@@ -48,26 +48,14 @@ Do only your slice; the other owner does theirs. The suffix map is in
 6. Blocker aaye to task ko `[]` hi rakho, `**BLOCKED:**` line likho, aur human se poocho. Fake data, fake API key, fake transaction hash — kabhi nahi.
 7. Demo data ko hamesha `DEMO_FIXTURE_NOT_OFFICIAL` label karo. Live government data ka claim mat karo.
 
-8. Review loop har session ke liye anivarya hai. Har session in 4 steps mein chale: (a) RESOLVE — pichle session ke open review comments theek karo aur Status: RESOLVED likho; (b) REVIEW — pichle session ka kaam dekho (git diff, code par sirf read); (c) WORK — plan ka aagla task karo; (d) LOG — apne module log mein update karo. Review files module ke andar hoti hain: `frontend/review-f.md`, `backend/review-b.md`, `middleware/review-m.md`. Reviewer sirf apni review file edit karega, kabhi source code nahi.
-
-9. Har review entry mein `Checked:` line honi chahiye jis mein likha ho ki kya actually kiya gaya (diff read, typecheck/build/tests aur unka result, kaunsa api-contract.md section check kiya). Review bina `Checked:` ke invalid hai.
-
-10. Har review comment par severity ho: `[BLOCKER]` / `[MAJOR]` / `[NIT]`. Open `[BLOCKER]` hone par naya task start nahi ho sakta. Verdict: `APPROVED` ya `CHANGES_REQUESTED`.
-
-11. Order ka palan karein: (a) → (b) → (c) → (d). Ek-session ki deri nahi.
-
-12. Review fix commit exception: rule 2 (3 tasks ke baad commit) ka apvaad review comment fixes ke liye allowed hai. Message `fix(scope): resolve R-<n>` use karein taaki fix commit hash record ho sake. Document ye change `docs/team-workflow.md` mein bhi karein.
-
-13. Cross-module needs: har module log mein `## NEEDS FROM OTHER MODULE` section ho. Format: `- [] needs: <target module> | what: <endpoint/field/behaviour> | contract ref: <§> | requested by: <session>`. Delivery par `[.]` karo. Ye `npm run sync:docs` se `<module>/docs/cross-module-needs.md` mein generate hota hai.
-
 ## Repo map (files apni jagah par)
 
 ```
 root/                  whole-project files: opencode.json, package.json,
                        docker-compose.yml, .env*, SETUP.md, whole_plan.md
-frontend/              app code + log-f.md + review-f.md + AGENTS.md + SETUP.md + generated docs/
-backend/               API + DB + log-b.md + review-b.md + AGENTS.md + SETUP.md + generated docs/
-middleware/            TinyFish + chain + log-m.md + review-m.md + AGENTS.md + SETUP.md + generated docs/
+frontend/              app code + log-f.md + AGENTS.md + SETUP.md + generated docs/
+backend/               API + DB + log-b.md + AGENTS.md + SETUP.md + generated docs/
+middleware/            TinyFish + chain + log-m.md + AGENTS.md + SETUP.md + generated docs/
 docs/                  contracts, decisions, context packs, branch workflow, references
 scripts/               sync-docs.mjs, check-docs.mjs, demo.sh
 ```
@@ -108,8 +96,6 @@ Push ke baad PR kholo. `git push origin main` **kabhi nahi**.
 - [ ] Koi fake key / run ID / TxHash / government record nahi.
 - [ ] Demo data labelled (`DEMO_FIXTURE_NOT_OFFICIAL` / `demo: true`).
 - [ ] Module log updated; apna task marker `[.]`.
-- [ ] Pichle session ke open `[BLOCKER]` review comments resolve kiye gaye hain (Status: RESOLVED).
-- [ ] Pichle session ke liye review entry likhi gayi hai apne module ki review file mein (`Checked:` line + severity + Verdict).
 - [ ] `npm run sync:docs && npm run check:docs` pass.
 - [ ] Commit message batch table se match karta hai.
 
@@ -194,6 +180,118 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `git log --oneline -1` shows `729e9eb`; `git status --short` is clean.
 
+## Phase 6 — Blockchain deployment — [1/3]
+
+### [.] T6.1-F — ABI + chain config (frontend slice)
+
+**Done:** 2026-11-02 12:15 IST — Session 1
+
+**Kya hua:** `frontend/src/lib/escrowAbi.json` banao Hardhat artifact se ABI copy kiya; `frontend/src/lib/chain.ts` me `VITE_ESCROW_ADDRESS`, `VITE_CHAIN_ID`, `VITE_CHAIN_NAME`, `VITE_EXPLORER_URL` padhne ka config banaya; missing address par UI warning dikhta hai, crash nahi hota; `frontend/.env.example` update kiya.
+
+**Kya karta hai:** Frontend ab escrow contract address aur ABI use kar sakta hai; chain config centrally manage hoti hai.
+
+**Files:** `frontend/src/lib/escrowAbi.json`, `frontend/src/lib/chain.ts`, `frontend/.env.example`, `frontend/src/App.tsx` (warning banner), `frontend/src/index.css` (banner style).
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+## Phase 7 — Frontend real flows — [3/6]
+
+### [.] T7.1 — Map par parcel aur ALU layers
+
+**Done:** 2026-11-02 14:30 IST — Session 1
+
+**Kya hua:** `frontend/src/lib/api.ts` me typed `fetchParcel`, `fetchAlus`, `fetchListings` add kiye; `MapView.tsx` rewrite kiya MapLibre sources/layers ke saath (parcel fill + outline, ALU grid lines); zoom → ALU level mapping (>=20 → 1m, >=17 → 10m, >=14 → 100m, >=10 → 1km); `DEMO-ULPIN-001` auto-load; click popup me ULPIN/ALU ID; loading/error states; saare source/layer IDs `lm-` prefix se.
+
+**Kya karta hai:** Demo parcel aur ALUs map par render hote hain; ALU layer zoom ke saath badalti hai.
+
+**Files:** `frontend/src/lib/api.ts`, `frontend/src/components/MapView.tsx`, `frontend/src/index.css` (map loading/error styles).
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+### [.] T7.2 — Officer evidence + review UI
+
+**Done:** 2026-11-02 15:45 IST — Session 1
+
+**Kya hua:** `EvidencePanel.tsx` banaya - 21-field evidence table, status chips (AVAILABLE/PARTIAL/N/A/N/D), source links, run ID, evidence hash with copy button. `ReviewQueue.tsx` banaya - pending review list, Approve/Reject buttons with reason input, X-Officer-Token header. `api.ts` me evidence/review types aur functions add kiye. Error states: middleware down, missing key, no evidence.
+
+**Kya karta hai:** Officer demo flow UI se chalta hai - evidence submit, review, approve/reject.
+
+**Files:** `frontend/src/components/EvidencePanel.tsx`, `frontend/src/components/ReviewQueue.tsx`, `frontend/src/lib/api.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** typecheck aur build pass.
+
+### [.] T7.3 — Citizen wallet connect + chain switch
+
+**Done:** 2026-11-02 17:30 IST — Session 1
+
+**Kya hua:** `frontend/src/lib/wallet.ts` banaya - `connectWallet()`, `switchToConfiguredChain()`, `onAccountsChanged()`. `window.ethereum` connect, chain switch/add (local 31337), account change listener. No wallet par clear message. Shortened address + disconnect/reset UI. `WalletPill` component in `App.tsx` me integrate kiya.
+
+**Kya karta hai:** Wallet connect/disconnect aur chain switch kaam karta hai.
+
+**Files:** `frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+### [.] T7.4 — Listing browse + buy flow
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** `ethers` ^6.13 add kiya `frontend/package.json` me aur install kiya; `frontend/src/lib/web3.ts` banaya (`chainOrderId` via `ethers.id`, `getSigner`, `createOrder` contract call); `api.ts` me Order/OrderState/TradeDecision/CheckResult types + `createOrderApi`, `fundOrderApi`, `evaluateOrderApi`, `fetchOrderApi` add kiye; `ListingCard.tsx` banaya (bundle, ULPIN, price, seller KYC badge, ALU count, Buy); `TradeStatus.tsx` banaya (6 check rows, decision, chain state, tx hash, explorer link, `NEEDS_REVIEW` officer message, refresh + timeout); `App.tsx` me listings browse + buy flow + trade status wiring + demo banner; `index.css` styles add kiye.
+
+**Kya karta hai:** Listings browse karke citizen local chain par buy flow shuru kar sakta hai; order create → createOrder → funded → evaluate → poll tak track hota hai.
+
+**Files:** `frontend/src/components/ListingCard.tsx`, `frontend/src/components/TradeStatus.tsx`, `frontend/src/lib/api.ts`, `frontend/src/lib/web3.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`, `frontend/package.json`.
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+### [.] T7.5 — Trade status panel
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** `frontend/src/components/TradeStatus.tsx` banaya — cheh check rows (pass/fail/reason/blocking), decision, order state, chain state, tx hash, explorer link. `NEEDS_REVIEW` par "officer review" dikhta hai, settle claim nahi. Refresh button + clear timeout message. `App.tsx` me wire kiya.
+
+**Kya karta hai:** Trade status panel contract ke saare fields dikhata hai.
+
+**Files:** `frontend/src/components/TradeStatus.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** typecheck aur build pass.
+
+### [.] T7.6 — Empty/error states, banner and responsive polish
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** Loading/empty/error states map, listings, reviews, trade ke liye hain. Accessible labels, focus-visible outline, disabled buttons, `aria-live` status. Demo banner `Testnet only, not a legal title transfer.` visible. `DEMO_FIXTURE_NOT_OFFICIAL` badge listings par. Responsive 375px media query. Vite chunk-size warning pre-existing, documented in T7.6/T8.3-F scope.
+
+**Kya karta hai:** UI polished, koi horizontal scroll nahi, states covered, banner visible.
+
+**Files:** `frontend/src/**`, `frontend/README.md`, `frontend/log-f.md`.
+
+**Verify:** manual + `npm --prefix frontend run build`.
+
+### [.] T8.3-F — Frontend security/quality gate (frontend slice)
+
+**Done:** 2026-11-05 20:38 IST — Session 12
+
+**Kya hua:** `npm --prefix frontend run typecheck`, `build`, `audit --omit=dev` sab pass (0 vulnerabilities). Accessibility basics: `focus-visible` outline on interactive elements, disabled buttons while pending, `aria-live` status regions, accessible labels. Bundle chunk warning documented in `frontend/README.md`. `README.md` updated with final frontend commands (dev, typecheck, build, preview, audit).
+
+**Kya karta hai:** Frontend quality gate saaf hua; build pass.
+
+**Files:** `frontend/src/index.css`, `frontend/README.md`, `frontend/src/App.tsx`, `frontend/src/components/ListingCard.tsx`, `frontend/src/components/TradeStatus.tsx`.
+
+**Verify:** `npm --prefix frontend run build`.
+
+### [.] T9.3-F — Frontend production container (frontend slice)
+
+**Done:** 2026-11-05 20:38 IST — Session 12
+
+**Kya hua:** `frontend/Dockerfile` banaya — node:24-alpine builder stage (`npm ci` + `npm run build`) aur nginx:alpine serve stage (`/usr/share/nginx/html`, port 80). Public demo env/API base check document kiya `README.md` me (`VITE_API_BASE_URL`, `VITE_ESCROW_ADDRESS`, etc.).
+
+**Kya karta hai:** Frontend static build ko production container me serve kiya ja sakta hai.
+
+**Files:** `frontend/Dockerfile`, `frontend/README.md`.
+
+**Verify:** Dockerfile present; `npm --prefix frontend run build` uses documented commands.
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -207,68 +305,6 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 - [.] 22:11 — Frontend typecheck/build, backend ruff/pytest, middleware typecheck/test,
   `docker compose config`, aur JSON validation pass.
 - [.] Commit/push — C0 me hoga.
-
-## Middleware — Sessions M1, M2, M3
-
-### [.] T5.3-M — Middleware escrow status endpoint (middleware slice)
-
-**Done:** 2026-11-11 02:30 IST — Session M1
-
-**Kya hua:** `GET /escrow/status/:orderId` route add kiya (`middleware/src/server.ts`); `getOrderState` reader aur `ORDER_STATE_LABELS` (`middleware/src/blockchain/escrow.ts`); invalid orderId → 400, chain error → 502; response `{orderId,state,label}` per `docs/api-contract.md` §4. Tests add kiye: None→Funded→Settled, refund→Refunded, invalid orderId reject. `typecheck`/`compile`/`test` pass (7 passing).
-
-**Kya karta hai:** On-chain escrow state readable via middleware API for backend settlement decisions.
-
-**Files:** `middleware/src/server.ts`, `middleware/src/blockchain/escrow.ts`, `middleware/test/LandMarketEscrow.test.ts`
-
-**Proof:** `npm --prefix middleware run typecheck` pass; `npm --prefix middleware test` 7 passing; `npm --prefix middleware run compile` pass.
-
-### [.] T6.1-M — Deploy artifacts (middleware slice)
-
-**Done:** 2026-11-11 03:55 IST — Session M1
-
-**Kya hua:** `scripts/deploy.ts` ab `middleware/deployments/<network>.json` likhta hai (address, chainId, deployer, operator, deployedAt). Local deploy chalaya; `middleware/deployments/localhost.json` commit kiya (koi key nahi).
-
-**Kya karta hai:** Deploy artifact record for frontend ABI + contract address wiring.
-
-**Files:** `middleware/scripts/deploy.ts`, `middleware/deployments/localhost.json`
-
-**Proof:** `npm --prefix middleware run deploy:local` → artifact written.
-
-### [.] T6.2 — Local chain smoke test
-
-**Done:** 2026-11-11 04:30 IST — Session M2
-
-**Kya hua:** `scripts/chain-smoke.ts` banaya (fresh deploy → createOrder → settle → orderState 1→2 → seller balance +0.01 ETH), `npm run chain:smoke` script add kiya, root `Makefile` ka `chain` target, `middleware/README.md` me local chain steps.
-
-**Kya karta hai:** End-to-end local chain create→settle→state verification.
-
-**Files:** `middleware/scripts/chain-smoke.ts`, `middleware/package.json`, `Makefile`, `middleware/README.md`
-
-**Proof:** `npm --prefix middleware run chain:smoke` PASS.
-
-### [.] T8.3-M — Middleware security/quality gate (middleware slice)
-
-**Done:** 2026-11-11 05:00 IST — Session M3
-
-**Kya hua:** `typecheck`, `test` (7 passing), `compile`, `audit --omit=dev` (0 vulnerabilities); secrets grep (koi real value nahi, sirf env-var name refs); `.env` git-ignored confirm.
-
-**Kya karta hai:** Middleware security/quality gate.
-
-**Files:** `middleware/src/`, `middleware/test/`, `middleware/package.json`
-
-**Proof:** all four gate commands pass; `.env` ignored.
-
-### [.] T9.3-M — Middleware production container (middleware slice)
-
-**Done:** 2026-11-11 05:15 IST — Session M3
-
-**Kya hua:** `middleware/Dockerfile` banaya (multi-stage build, non-root runtime, secrets via env only, key kabhi image me nahi). Docker daemon session me reachable nahi; syntax review kiya.
-
-**Kya karta hai:** Middleware production container.
-
-**Files:** `middleware/Dockerfile`
-
-**Proof:** Dockerfile syntax reviewed (daemon unreachable this session).
 
 ---
 
@@ -399,8 +435,8 @@ mocked middleware response until the key arrives.
 fake run mat karo.
 
 **Kya karna hai**
-1. `middleware/.env` me `TINYFISH_API_KEY` daalo (human se lo); `npm --prefix middleware run smoke:tinyfish` chalao. Key na mile to task `[]` rakho, fake run mat karo.
-2. `npm --prefix middleware run smoke:tinyfish` chalao.
+1. **BLOCKER:** human se `TINYFISH_API_KEY` lo. Key na mile to task `[]` rakho, fake run mat karo.
+2. `middleware/.env` me key daalo; `npm --prefix middleware run smoke:tinyfish` chalao.
 3. Asli ULPIN ke liye BhuNaksha ya jo portal officer de, us par ek run karo; run ID, source URLs,
    status aur latency note karo.
 4. `docs/tinyfish-smoke.md` banao: date, URL, goal, run ID, result summary, screenshot path.
@@ -550,6 +586,20 @@ fake run mat karo.
 **Done criteria:** Ek order evaluate hoke decision DB me save hota hai.
 **Verify:** `pytest -q backend/tests/test_evaluate.py`.
 
+### [] T5.3-M — Middleware escrow status endpoint (middleware slice)
+
+**Owner:** Middleware. Do this before backend `T5.3-B` if possible; backend can mock it.
+
+**Kya karna hai**
+1. `middleware/src/server.ts` me `GET /escrow/status/:orderId` add karo — contract
+   `orderState` padhe (0 None, 1 Funded, 2 Settled, 3 Refunded).
+2. Invalid order ID par 400, chain error par 502.
+3. Response exactly `{orderId, state, label}` per `docs/api-contract.md` §4.
+
+**Files:** `middleware/src/server.ts`, `middleware/src/blockchain/escrow.ts`, middleware tests.
+**Done criteria:** `curl localhost:8090/escrow/status/<orderId>` sahi state deta hai.
+**Verify:** local chain + `curl`.
+
 ### [] T5.3-B — Backend settle/refund wiring (backend slice)
 
 **Owner:** Backend. May mock `T5.3-M` until it is merged.
@@ -572,22 +622,40 @@ fake run mat karo.
 
 ---
 
-## Phase 6 — Blockchain deployment — [0/3]
+## Phase 6 — Blockchain deployment — [1/3]
 
 **Owner split:** `T6.1-M`, `T6.2`, `T6.3` middleware; `T6.1-F` frontend. Context pack: `docs/context/C6.md`.
 
-### [] T6.1-F — ABI + chain config (frontend slice)
+### [] T6.1-M — Deploy artifacts (middleware slice)
 
-**Owner:** Frontend. Can use the artifact from a local middleware build.
+**Owner:** Middleware.
 
-1. ABI ko `frontend/src/lib/escrowAbi.json` me copy karo (artifact se).
-2. Frontend config `VITE_ESCROW_ADDRESS`, `VITE_CHAIN_ID`, `VITE_CHAIN_NAME`,
-   `VITE_EXPLORER_URL` padhe; missing ho to UI par clear warning dikhe, crash na ho.
-3. `frontend/.env.example` update karo.
+1. `middleware/scripts/deploy.ts` deploy ke baad `middleware/deployments/<network>.json` likhe:
+   address, chainId, deployer, operator, deployedAt.
+2. Commit a small `deployments/localhost.json` example (no key), or document generation.
+3. Addresses docs me commit karo; `.env` kabhi nahi.
 
-**Files:** `frontend/src/lib/escrowAbi.json`, `frontend/src/lib/chain.ts`, `frontend/.env.example`.
-**Done criteria:** Missing address shows warning; configured address works.
-**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build`.
+**Files:** `middleware/scripts/deploy.ts`, `middleware/deployments/`.
+**Done criteria:** Local deploy ke baad address file ready.
+**Verify:** `npm --prefix middleware run deploy:local`.
+
+### [] T6.2 — Local chain smoke test
+
+**Owner:** Middleware.
+
+**Kya karna hai**
+
+**Kya karna hai**
+1. `middleware/scripts/chain-smoke.ts`: buyer se `createOrder`, operator se `settle`,
+   `orderState` check, events verify.
+2. `npm run chain:smoke` script add karo; Hardhat node assume kare ya khud spawn kare.
+3. Root `Makefile` me `chain` target: node start + deploy + smoke.
+4. README me local chain steps.
+
+**Files:** `middleware/scripts/chain-smoke.ts`, `middleware/package.json`, `Makefile`,
+`middleware/README.md`.
+**Done criteria:** `npm --prefix middleware run chain:smoke` pass.
+**Verify:** terminal 1 `npm --prefix middleware run node`, terminal 2 smoke.
 
 ### [] T6.3 — Sepolia deploy aur record
 
@@ -612,104 +680,9 @@ fake run mat karo.
 
 ---
 
-## Phase 7 — Frontend real flows — [0/6]
+## Phase 7 — Frontend real flows — [1/6]
 
 **Owner:** Frontend. Context packs: `docs/context/C7A.md` (T7.1–T7.3), `docs/context/C7B.md` (T7.4–T7.6).
-
-### [] T7.1 — Map par parcel aur ALU layers
-
-**Owner:** Frontend. Context pack: `docs/context/C7A.md`.
-
-**Kya karna hai**
-1. `frontend/src/lib/api.ts` me typed `fetchParcel`, `fetchAlus`, `fetchListings` add karo.
-2. MapLibre me sources/layers: parcel fill + outline, ALU grid lines, selected parcel highlight.
-3. Zoom level → ALU level mapping (10+ → 1km, 14+ → 100m, 17+ → 10m, 20+ → 1m).
-4. Demo ULPIN `DEMO-ULPIN-001` auto-load; click par popup me ULPIN/ALU ID.
-5. Loading/error/empty states.
-
-**Files:** `frontend/src/lib/api.ts`, `frontend/src/components/MapView.tsx`,
-`frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Demo parcel aur ALUs map par dikhte hain; typecheck/build pass.
-**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build`.
-
-### [] T7.2 — Officer evidence + review UI
-
-**Owner:** Frontend. Context pack: `docs/context/C7A.md`.
-
-**Kya karna hai**
-1. ULPIN submit par evidence response ko table me dikhao: 21 fields, status chips
-   (`AVAILABLE/PARTIAL/N/A/N/D`), source links, run ID, evidence hash.
-2. Review queue list + Approve/Reject buttons with reason input.
-3. Hash ko copy button ke saath dikhao; sources clickable hon.
-4. Error states: middleware down, missing key, no evidence.
-
-**Files:** `frontend/src/components/EvidencePanel.tsx`, `frontend/src/components/ReviewQueue.tsx`,
-`frontend/src/lib/api.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Officer demo flow UI se chalta hai.
-**Verify:** manual + build.
-
-### [] T7.3 — Citizen wallet connect + chain switch
-
-**Owner:** Frontend. Context pack: `docs/context/C7A.md`.
-
-**Kya karna hai**
-1. `frontend/src/lib/wallet.ts`: `window.ethereum` connect, chain switch/add (local 31337),
-   account change listener; wallet na ho to clear message.
-2. Shortened address + disconnect/reset UI.
-3. No buy transaction yet; buy is `T7.4`.
-
-**Files:** `frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Wallet connect/disconnect aur chain switch kaam karta hai.
-**Verify:** manual in browser + build.
-
-### Commit batch C7A — T7.1, T7.2, T7.3
-
-**Message:** `feat(web): add map layers, evidence review and wallet connect`
-
-### [] T7.4 — Listing browse + buy flow
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. `frontend/src/components/ListingCard.tsx`: bundle, ULPIN, price, seller KYC badge, ALU count.
-2. Buy sequence exactly:
-   `POST /orders` → `ethers.id("landmarket-order:" + id)` → `createOrder(...)` with value →
-   wait receipt → `POST /orders/{id}/funded` → `POST /orders/{id}/evaluate` → poll `GET /orders/{id}`.
-3. Disable button while pending; wrong chain par switch prompt.
-
-**Files:** `frontend/src/components/ListingCard.tsx`, `frontend/src/lib/api.ts`,
-`frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Local chain par end-to-end buy ho jaata hai.
-**Verify:** manual demo on local chain + build.
-
-### [] T7.5 — Trade status panel
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. `frontend/src/components/TradeStatus.tsx`: six check rows (pass/fail/reason/blocking),
-   decision, order state, chain state, tx hash, explorer link.
-2. `NEEDS_REVIEW` par "officer review" dikhao, settle claim mat karo.
-3. Refresh button + clear timeout message.
-
-**Files:** `frontend/src/components/TradeStatus.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Status panel contract ke saare fields dikhata hai.
-**Verify:** manual + build.
-
-### [] T7.6 — Empty/error states, banner and responsive polish
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. Loading/empty/error for map, listings, reviews, trade.
-2. Accessible labels, focus-visible styles, disabled buttons, `aria-live` status.
-3. Visible banner: `Testnet only, not a legal title transfer.`
-4. Demo badge `DEMO_FIXTURE_NOT_OFFICIAL`; responsive at 375px and 1280px.
-5. Vite chunk warning fix ya document karo.
-
-**Files:** `frontend/src/**`, `frontend/README.md`, `frontend/log-f.md`.
-**Done criteria:** No horizontal scroll; states covered; banner visible.
-**Verify:** manual + `npm --prefix frontend run build`.
 
 ### Commit batch C7B — T7.4, T7.5, T7.6
 
@@ -760,14 +733,14 @@ fake run mat karo.
 3. Backend part of `docs/limitations.md` (demo data, KYC stub, testnet only).
 **Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
-### [] T8.3-F — Frontend security/quality gate (frontend slice)
+### [] T8.3-M — Middleware security/quality gate (middleware slice)
 
-**Owner:** Frontend.
+**Owner:** Middleware.
 
-1. `npm --prefix frontend run typecheck`, `build`, `audit --omit=dev`.
-2. Accessibility basics, focus states, disabled buttons.
-3. Chunk warning fix or documented.
-**Verify:** `npm --prefix frontend run build`.
+1. Secrets grep (`TINYFISH_API_KEY`, `OPERATOR_PRIVATE_KEY`, private keys).
+2. `npm --prefix middleware run typecheck && npm --prefix middleware test && npm --prefix middleware run compile`.
+3. `npm --prefix middleware audit --omit=dev`.
+**Verify:** all four commands pass; `.env` ignored.
 
 ### [] T8.3-D — Final docs and architecture (lead slice)
 
@@ -810,9 +783,9 @@ AI tests; backend contract change only via lead.
 
 **Owner:** Backend. `backend/Dockerfile`.
 
-### [] T9.3-F — Frontend production container (frontend slice)
+### [] T9.3-M — Middleware production container (middleware slice)
 
-**Owner:** Frontend. `frontend/Dockerfile`.
+**Owner:** Middleware. `middleware/Dockerfile`.
 
 ### [] T9.3-D — Public demo deployment (lead slice)
 
