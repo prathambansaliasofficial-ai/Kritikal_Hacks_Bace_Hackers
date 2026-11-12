@@ -172,3 +172,10 @@ Branch: `middleware/<name>` (or `ai/<name>` for TinyFish prompts). Owner map: `.
 C0 ke baad `main` se `middleware/<name>` branch banao.
 
 **C0 commit message:** `chore: scaffold land market monorepo and roadmap`
+
+## NEEDS FROM OTHER MODULE
+
+Format: `- [] needs: <target module> | what: <endpoint/field/behaviour> | contract ref: <§> | requested by: <session>`
+Mark `[.]` when the other module delivered it.
+
+(none yet)

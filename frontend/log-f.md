@@ -166,3 +166,10 @@ Branch: `frontend/<name>` only. Owner map: `../docs/task-ownership.md`.
 jo `T6.1-M` ke baad aayega. Tab tak apni branch `main` se sync rakho.
 
 **C0 commit message:** `chore: scaffold land market monorepo and roadmap`
+
+## NEEDS FROM OTHER MODULE
+
+Format: `- [] needs: <target module> | what: <endpoint/field/behaviour> | contract ref: <§> | requested by: <session>`
+Mark `[.]` when the other module delivered it.
+
+(none yet)

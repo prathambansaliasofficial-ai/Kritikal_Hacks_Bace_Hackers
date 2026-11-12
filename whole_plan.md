@@ -44,14 +44,26 @@ Do only your slice; the other owner does theirs. The suffix map is in
 6. Blocker aaye to task ko `[]` hi rakho, `**BLOCKED:**` line likho, aur human se poocho. Fake data, fake API key, fake transaction hash — kabhi nahi.
 7. Demo data ko hamesha `DEMO_FIXTURE_NOT_OFFICIAL` label karo. Live government data ka claim mat karo.
 
+8. Review loop har session ke liye anivarya hai. Har session in 4 steps mein chale: (a) RESOLVE — pichle session ke open review comments theek karo aur Status: RESOLVED likho; (b) REVIEW — pichle session ka kaam dekho (git diff, code par sirf read); (c) WORK — plan ka aagla task karo; (d) LOG — apne module log mein update karo. Review files module ke andar hoti hain: `frontend/review-f.md`, `backend/review-b.md`, `middleware/review-m.md`. Reviewer sirf apni review file edit karega, kabhi source code nahi.
+
+9. Har review entry mein `Checked:` line honi chahiye jis mein likha ho ki kya actually kiya gaya (diff read, typecheck/build/tests aur unka result, kaunsa api-contract.md section check kiya). Review bina `Checked:` ke invalid hai.
+
+10. Har review comment par severity ho: `[BLOCKER]` / `[MAJOR]` / `[NIT]`. Open `[BLOCKER]` hone par naya task start nahi ho sakta. Verdict: `APPROVED` ya `CHANGES_REQUESTED`.
+
+11. Order ka palan karein: (a) → (b) → (c) → (d). Ek-session ki deri nahi.
+
+12. Review fix commit exception: rule 2 (3 tasks ke baad commit) ka apvaad review comment fixes ke liye allowed hai. Message `fix(scope): resolve R-<n>` use karein taaki fix commit hash record ho sake. Document ye change `docs/team-workflow.md` mein bhi karein.
+
+13. Cross-module needs: har module log mein `## NEEDS FROM OTHER MODULE` section ho. Format: `- [] needs: <target module> | what: <endpoint/field/behaviour> | contract ref: <§> | requested by: <session>`. Delivery par `[.]` karo. Ye `npm run sync:docs` se `<module>/docs/cross-module-needs.md` mein generate hota hai.
+
 ## Repo map (files apni jagah par)
 
 ```
 root/                  whole-project files: opencode.json, package.json,
                        docker-compose.yml, .env*, SETUP.md, whole_plan.md
-frontend/              app code + log-f.md + AGENTS.md + SETUP.md + generated docs/
-backend/               API + DB + log-b.md + AGENTS.md + SETUP.md + generated docs/
-middleware/            TinyFish + chain + log-m.md + AGENTS.md + SETUP.md + generated docs/
+frontend/              app code + log-f.md + review-f.md + AGENTS.md + SETUP.md + generated docs/
+backend/               API + DB + log-b.md + review-b.md + AGENTS.md + SETUP.md + generated docs/
+middleware/            TinyFish + chain + log-m.md + review-m.md + AGENTS.md + SETUP.md + generated docs/
 docs/                  contracts, decisions, context packs, branch workflow, references
 scripts/               sync-docs.mjs, check-docs.mjs, demo.sh
 ```
@@ -92,6 +104,8 @@ Push ke baad PR kholo. `git push origin main` **kabhi nahi**.
 - [ ] Koi fake key / run ID / TxHash / government record nahi.
 - [ ] Demo data labelled (`DEMO_FIXTURE_NOT_OFFICIAL` / `demo: true`).
 - [ ] Module log updated; apna task marker `[.]`.
+- [ ] Pichle session ke open `[BLOCKER]` review comments resolve kiye gaye hain (Status: RESOLVED).
+- [ ] Pichle session ke liye review entry likhi gayi hai apne module ki review file mein (`Checked:` line + severity + Verdict).
 - [ ] `npm run sync:docs && npm run check:docs` pass.
 - [ ] Commit message batch table se match karta hai.
 
