@@ -20,6 +20,20 @@ Local chain:
 ```bash
 npm run node                    # terminal 1
 npm run deploy:local            # terminal 2, copy address into .env
+npm run chain:smoke             # createOrder -> settle -> orderState -> balance check
 ```
+
+Two-terminal flow:
+
+```bash
+# terminal 1
+npm run node
+
+# terminal 2
+npm run deploy:local
+npm run chain:smoke
+```
+
+Root shortcuts (`make chain` runs deploy + smoke; node must be running in another terminal).
 
 Copy `.env.example` to `.env` and fill `TINYFISH_API_KEY` plus the operator key.

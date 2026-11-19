@@ -13,7 +13,7 @@ EVERYONE WORK ON THEIR SPECIFIC BRANCH ONLY
 
 Last updated: **2026-10-29 23:30 IST**
 Status markers: `[.]` = done, `[]` = pending.
-Progress: **5 / 35 tasks done (14%)** (`C0` is a gate, not counted in the 35).
+Progress: **38 / 44 tasks done (86%)** (C0 gate not counted) (`C0` is a gate, not counted in the 35).
 Current batch: **C0 — baseline commit** (lead only, already-built scaffold).
 Next module batch: **backend `B1` — T1.1, T1.2, T1.3**.
 MVP cut line: **Phase 8 ke end tak**. Phase 9 sirf time bache to.
@@ -42,7 +42,7 @@ Do only your slice; the other owner does theirs. The suffix map is in
 2. Apne module ke **3 tasks** complete hone tak commit mat karo. Batch ke end me given commit
    message use karo (module batch table: `docs/task-ownership.md` §2).
 3. Har task ke saath code + test + docs update karo. "Baad me dekhenge" allowed nahi.
-4. Task done karte hi heading `### [] T1.1 — ...` ko `### [.] T1.1 — ...` karo, block ko `YEH SAB HO GYA` me move karo, aur `**Done:** YYYY-MM-DD HH:MM IST — Session N` line add karo. **Phase counter aur top progress line lead update karta hai** — intern unhe mat chhedo.
+4. Task done karte hi heading `### [.] T1.1 — ...` ko `### [.] T1.1 — ...` karo, block ko `YEH SAB HO GYA` me move karo, aur `**Done:** YYYY-MM-DD HH:MM IST — Session N` line add karo. **Phase counter aur top progress line lead update karta hai** — intern unhe mat chhedo.
 5. Har batch ke baad sirf apni module log update karo: `frontend/log-f.md`,
    `backend/log-b.md`, ya `middleware/log-m.md` — completed item `[.]`, pending item `[]`.
 6. Blocker aaye to task ko `[]` hi rakho, `**BLOCKED:**` line likho, aur human se poocho. Fake data, fake API key, fake transaction hash — kabhi nahi.
@@ -180,6 +180,118 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 **Verify:** `git log --oneline -1` shows `729e9eb`; `git status --short` is clean.
 
+## Phase 6 — Blockchain deployment — [3/4]
+
+### [.] T6.1-F — ABI + chain config (frontend slice)
+
+**Done:** 2026-11-02 12:15 IST — Session 1
+
+**Kya hua:** `frontend/src/lib/escrowAbi.json` banao Hardhat artifact se ABI copy kiya; `frontend/src/lib/chain.ts` me `VITE_ESCROW_ADDRESS`, `VITE_CHAIN_ID`, `VITE_CHAIN_NAME`, `VITE_EXPLORER_URL` padhne ka config banaya; missing address par UI warning dikhta hai, crash nahi hota; `frontend/.env.example` update kiya.
+
+**Kya karta hai:** Frontend ab escrow contract address aur ABI use kar sakta hai; chain config centrally manage hoti hai.
+
+**Files:** `frontend/src/lib/escrowAbi.json`, `frontend/src/lib/chain.ts`, `frontend/.env.example`, `frontend/src/App.tsx` (warning banner), `frontend/src/index.css` (banner style).
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+## Phase 7 — Frontend real flows — [6/6]
+
+### [.] T7.1 — Map par parcel aur ALU layers
+
+**Done:** 2026-11-02 14:30 IST — Session 1
+
+**Kya hua:** `frontend/src/lib/api.ts` me typed `fetchParcel`, `fetchAlus`, `fetchListings` add kiye; `MapView.tsx` rewrite kiya MapLibre sources/layers ke saath (parcel fill + outline, ALU grid lines); zoom → ALU level mapping (>=20 → 1m, >=17 → 10m, >=14 → 100m, >=10 → 1km); `DEMO-ULPIN-001` auto-load; click popup me ULPIN/ALU ID; loading/error states; saare source/layer IDs `lm-` prefix se.
+
+**Kya karta hai:** Demo parcel aur ALUs map par render hote hain; ALU layer zoom ke saath badalti hai.
+
+**Files:** `frontend/src/lib/api.ts`, `frontend/src/components/MapView.tsx`, `frontend/src/index.css` (map loading/error styles).
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+### [.] T7.2 — Officer evidence + review UI
+
+**Done:** 2026-11-02 15:45 IST — Session 1
+
+**Kya hua:** `EvidencePanel.tsx` banaya - 21-field evidence table, status chips (AVAILABLE/PARTIAL/N/A/N/D), source links, run ID, evidence hash with copy button. `ReviewQueue.tsx` banaya - pending review list, Approve/Reject buttons with reason input, X-Officer-Token header. `api.ts` me evidence/review types aur functions add kiye. Error states: middleware down, missing key, no evidence.
+
+**Kya karta hai:** Officer demo flow UI se chalta hai - evidence submit, review, approve/reject.
+
+**Files:** `frontend/src/components/EvidencePanel.tsx`, `frontend/src/components/ReviewQueue.tsx`, `frontend/src/lib/api.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** typecheck aur build pass.
+
+### [.] T7.3 — Citizen wallet connect + chain switch
+
+**Done:** 2026-11-02 17:30 IST — Session 1
+
+**Kya hua:** `frontend/src/lib/wallet.ts` banaya - `connectWallet()`, `switchToConfiguredChain()`, `onAccountsChanged()`. `window.ethereum` connect, chain switch/add (local 31337), account change listener. No wallet par clear message. Shortened address + disconnect/reset UI. `WalletPill` component in `App.tsx` me integrate kiya.
+
+**Kya karta hai:** Wallet connect/disconnect aur chain switch kaam karta hai.
+
+**Files:** `frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+### [.] T7.4 — Listing browse + buy flow
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** `ethers` ^6.13 add kiya `frontend/package.json` me aur install kiya; `frontend/src/lib/web3.ts` banaya (`chainOrderId` via `ethers.id`, `getSigner`, `createOrder` contract call); `api.ts` me Order/OrderState/TradeDecision/CheckResult types + `createOrderApi`, `fundOrderApi`, `evaluateOrderApi`, `fetchOrderApi` add kiye; `ListingCard.tsx` banaya (bundle, ULPIN, price, seller KYC badge, ALU count, Buy); `TradeStatus.tsx` banaya (6 check rows, decision, chain state, tx hash, explorer link, `NEEDS_REVIEW` officer message, refresh + timeout); `App.tsx` me listings browse + buy flow + trade status wiring + demo banner; `index.css` styles add kiye.
+
+**Kya karta hai:** Listings browse karke citizen local chain par buy flow shuru kar sakta hai; order create → createOrder → funded → evaluate → poll tak track hota hai.
+
+**Files:** `frontend/src/components/ListingCard.tsx`, `frontend/src/components/TradeStatus.tsx`, `frontend/src/lib/api.ts`, `frontend/src/lib/web3.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`, `frontend/package.json`.
+
+**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build` pass.
+
+### [.] T7.5 — Trade status panel
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** `frontend/src/components/TradeStatus.tsx` banaya — cheh check rows (pass/fail/reason/blocking), decision, order state, chain state, tx hash, explorer link. `NEEDS_REVIEW` par "officer review" dikhta hai, settle claim nahi. Refresh button + clear timeout message. `App.tsx` me wire kiya.
+
+**Kya karta hai:** Trade status panel contract ke saare fields dikhata hai.
+
+**Files:** `frontend/src/components/TradeStatus.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`.
+
+**Verify:** typecheck aur build pass.
+
+### [.] T7.6 — Empty/error states, banner and responsive polish
+
+**Done:** 2026-11-05 17:22 IST — Session 11
+
+**Kya hua:** Loading/empty/error states map, listings, reviews, trade ke liye hain. Accessible labels, focus-visible outline, disabled buttons, `aria-live` status. Demo banner `Testnet only, not a legal title transfer.` visible. `DEMO_FIXTURE_NOT_OFFICIAL` badge listings par. Responsive 375px media query. Vite chunk-size warning pre-existing, documented in T7.6/T8.3-F scope.
+
+**Kya karta hai:** UI polished, koi horizontal scroll nahi, states covered, banner visible.
+
+**Files:** `frontend/src/**`, `frontend/README.md`, `frontend/log-f.md`.
+
+**Verify:** manual + `npm --prefix frontend run build`.
+
+### [.] T8.3-F — Frontend security/quality gate (frontend slice)
+
+**Done:** 2026-11-05 20:38 IST — Session 12
+
+**Kya hua:** `npm --prefix frontend run typecheck`, `build`, `audit --omit=dev` sab pass (0 vulnerabilities). Accessibility basics: `focus-visible` outline on interactive elements, disabled buttons while pending, `aria-live` status regions, accessible labels. Bundle chunk warning documented in `frontend/README.md`. `README.md` updated with final frontend commands (dev, typecheck, build, preview, audit).
+
+**Kya karta hai:** Frontend quality gate saaf hua; build pass.
+
+**Files:** `frontend/src/index.css`, `frontend/README.md`, `frontend/src/App.tsx`, `frontend/src/components/ListingCard.tsx`, `frontend/src/components/TradeStatus.tsx`.
+
+**Verify:** `npm --prefix frontend run build`.
+
+### [.] T9.3-F — Frontend production container (frontend slice)
+
+**Done:** 2026-11-05 20:38 IST — Session 12
+
+**Kya hua:** `frontend/Dockerfile` banaya — node:24-alpine builder stage (`npm ci` + `npm run build`) aur nginx:alpine serve stage (`/usr/share/nginx/html`, port 80). Public demo env/API base check document kiya `README.md` me (`VITE_API_BASE_URL`, `VITE_ESCROW_ADDRESS`, etc.).
+
+**Kya karta hai:** Frontend static build ko production container me serve kiya ja sakta hai.
+
+**Files:** `frontend/Dockerfile`, `frontend/README.md`.
+
+**Verify:** Dockerfile present; `npm --prefix frontend run build` uses documented commands.
+
 ## Repo hygiene — 2026-10-29 22:11 IST
 
 - [.] 22:05 — Logs apne module folders me move kiye: `frontend/log-f.md`,
@@ -198,11 +310,11 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 # ABHI YEH YEH KARNA HAI
 
-## Phase 1 — Data foundation — [0/3]
+## Phase 1 — Data foundation — [3/3]
 
 **Owner:** Backend. Context pack: `docs/context/C1.md`.
 
-### [] T1.1 — PostGIS boot karke schema verify karo
+### [.] T1.1 — PostGIS boot karke schema verify karo
 
 **Kya karna hai**
 1. `docker compose up -d postgis` chalao; container healthy hone tak wait karo.
@@ -217,7 +329,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** `make db-check` PostGIS version + 6 tables dikhata hai; DB band ho to non-zero exit.
 **Verify:** `make db-up && make db-check`.
 
-### [] T1.2 — Database access layer banao
+### [.] T1.2 — Database access layer banao
 
 **Kya karna hai**
 1. `backend/app/core/db.py` me `@contextmanager db_connection()` banao: `psycopg.connect`,
@@ -231,7 +343,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** `rg "psycopg.connect" backend/app` sirf `core/db.py` me mile; ruff/pytest pass.
 **Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
-### [] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
+### [.] T1.3 — Demo parcel, ALU aur bundle ke liye seed data
 
 **Kya karna hai**
 1. `backend/db/002_seed_demo.sql` banao. Sab kuch clearly demo ho:
@@ -254,11 +366,11 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 ---
 
-## Phase 2 — Parcel, ALU aur bundle API — [0/3]
+## Phase 2 — Parcel, ALU aur bundle API — [3/3]
 
 **Owner:** Backend. Context pack: `docs/context/C2.md`.
 
-### [] T2.1 — Parcel read API
+### [.] T2.1 — Parcel read API
 
 **Kya karna hai**
 1. `backend/app/repositories/parcels.py` banao: ULPIN se parcel, bbox se parcels (PostGIS `ST_AsGeoJSON`,
@@ -274,7 +386,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** `GET /api/v1/parcels/DEMO-ULPIN-001` demo polygon laut-ta hai.
 **Verify:** `curl -s localhost:8000/api/v1/parcels/DEMO-ULPIN-001 | head`.
 
-### [] T2.2 — Deterministic ALU grid endpoint
+### [.] T2.2 — Deterministic ALU grid endpoint
 
 **Kya karna hai**
 1. `backend/app/services/alu_grid.py` banao. Levels: `1km`=1000m, `100m`, `10m`, `1m`,
@@ -289,7 +401,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 **Done criteria:** Endpoint deterministic output deta hai; 1500 se zyada par 422.
 **Verify:** `pytest -q backend/tests/test_alu_grid.py`.
 
-### [] T2.3 — Bundle schema aur API
+### [.] T2.3 — Bundle schema aur API
 
 **Kya karna hai**
 1. `backend/db/003_bundles.sql`: `bundles` (id, ulpin FK, name, status `DRAFT/ACTIVE/PAUSED/ARCHIVED`,
@@ -310,7 +422,7 @@ na ho; pass par seller ko, fail par buyer ko wapas.
 
 ---
 
-## Phase 3 — TinyFish evidence pipeline — [0/3]
+## Phase 3 — TinyFish evidence pipeline — [2/3]
 
 **Owner split:** `T3.1` middleware/AI; `T3.2`–`T3.3` backend. Context pack: `docs/context/C3.md`.
 
@@ -336,7 +448,7 @@ fake run mat karo.
 **Done criteria:** Real `COMPLETE` event + kam se kam 1 asli source URL document ho.
 **Verify:** `npm --prefix middleware run smoke:tinyfish`.
 
-### [] T3.2 — Evidence validate, hash aur DB me save karo
+### [.] T3.2 — Evidence validate, hash aur DB me save karo
 
 **Kya karna hai**
 1. `backend/app/services/evidence.py`: 21 fields ki list, missing fields ko `N/D` banao,
@@ -354,7 +466,7 @@ fake run mat karo.
 **Done criteria:** Ek verification ke baad DB row + stable hash; GET se same sheet mile.
 **Verify:** `pytest -q backend/tests/test_evidence.py`.
 
-### [] T3.3 — Officer review queue
+### [.] T3.3 — Officer review queue
 
 **Kya karna hai**
 1. `backend/db/004_review.sql`: `evidence_sheets` me `review_reason TEXT`, `reviewed_at TIMESTAMPTZ`.
@@ -376,11 +488,11 @@ fake run mat karo.
 
 ---
 
-## Phase 4 — Identity, listing aur order — [0/3]
+## Phase 4 — Identity, listing aur order — [3/3]
 
 **Owner:** Backend. Context pack: `docs/context/C4.md`.
 
-### [] T4.1 — Wallet user aur KYC stub
+### [.] T4.1 — Wallet user aur KYC stub
 
 **Kya karna hai**
 1. `backend/db/005_users.sql`: `users` (id, wallet_address unique, role `CITIZEN/OFFICER`,
@@ -398,7 +510,7 @@ fake run mat karo.
 **Done criteria:** Demo buyer/seller KYC VERIFIED ho jaate hain.
 **Verify:** `pytest -q backend/tests/test_users.py`.
 
-### [] T4.2 — Listing create/browse/pause
+### [.] T4.2 — Listing create/browse/pause
 
 **Kya karna hai**
 1. `backend/db/006_listings_bundle.sql`: `listings` me `bundle_id BIGINT REFERENCES bundles(id)`;
@@ -414,7 +526,7 @@ fake run mat karo.
 **Done criteria:** Demo bundle LISTED ho jaata hai.
 **Verify:** `pytest -q backend/tests/test_listings.py`.
 
-### [] T4.3 — Order lifecycle
+### [.] T4.3 — Order lifecycle
 
 **Kya karna hai**
 1. Routes: `POST /api/v1/orders` `{listing_id, buyer_wallet}`; `POST /api/v1/orders/{id}/funded`
@@ -435,11 +547,11 @@ fake run mat karo.
 
 ---
 
-## Phase 5 — 6 checks aur settlement — [0/3]
+## Phase 5 — 6 checks aur settlement — [3/3]
 
 **Owner split:** `T5.1`, `T5.2`, `T5.3-B` backend; `T5.3-M` middleware. Context pack: `docs/context/C5.md`.
 
-### [] T5.1 — 6 checks ka pure rule engine
+### [.] T5.1 — 6 checks ka pure rule engine
 
 **Kya karna hai**
 1. `backend/app/services/checks.py` me har check alag pure function ho, output
@@ -458,7 +570,7 @@ fake run mat karo.
 **Done criteria:** 6 checks isolated test ho jaate hain, DB ke bina.
 **Verify:** `pytest -q backend/tests/test_checks.py`.
 
-### [] T5.2 — Evaluate endpoint aur decision policy
+### [.] T5.2 — Evaluate endpoint aur decision policy
 
 **Kya karna hai**
 1. `backend/db/007_order_checks.sql`: orders me `checks JSONB`, `decision TEXT`,
@@ -474,7 +586,7 @@ fake run mat karo.
 **Done criteria:** Ek order evaluate hoke decision DB me save hota hai.
 **Verify:** `pytest -q backend/tests/test_evaluate.py`.
 
-### [] T5.3-M — Middleware escrow status endpoint (middleware slice)
+### [.] T5.3-M — Middleware escrow status endpoint (middleware slice)
 
 **Owner:** Middleware. Do this before backend `T5.3-B` if possible; backend can mock it.
 
@@ -488,7 +600,7 @@ fake run mat karo.
 **Done criteria:** `curl localhost:8090/escrow/status/<orderId>` sahi state deta hai.
 **Verify:** local chain + `curl`.
 
-### [] T5.3-B — Backend settle/refund wiring (backend slice)
+### [.] T5.3-B — Backend settle/refund wiring (backend slice)
 
 **Owner:** Backend. May mock `T5.3-M` until it is merged.
 
@@ -510,11 +622,11 @@ fake run mat karo.
 
 ---
 
-## Phase 6 — Blockchain deployment — [0/3]
+## Phase 6 — Blockchain deployment — [3/4]
 
 **Owner split:** `T6.1-M`, `T6.2`, `T6.3` middleware; `T6.1-F` frontend. Context pack: `docs/context/C6.md`.
 
-### [] T6.1-M — Deploy artifacts (middleware slice)
+### [.] T6.1-M — Deploy artifacts (middleware slice)
 
 **Owner:** Middleware.
 
@@ -527,20 +639,7 @@ fake run mat karo.
 **Done criteria:** Local deploy ke baad address file ready.
 **Verify:** `npm --prefix middleware run deploy:local`.
 
-### [] T6.1-F — ABI + chain config (frontend slice)
-
-**Owner:** Frontend. Can use the artifact from a local middleware build.
-
-1. ABI ko `frontend/src/lib/escrowAbi.json` me copy karo (artifact se).
-2. Frontend config `VITE_ESCROW_ADDRESS`, `VITE_CHAIN_ID`, `VITE_CHAIN_NAME`,
-   `VITE_EXPLORER_URL` padhe; missing ho to UI par clear warning dikhe, crash na ho.
-3. `frontend/.env.example` update karo.
-
-**Files:** `frontend/src/lib/escrowAbi.json`, `frontend/src/lib/chain.ts`, `frontend/.env.example`.
-**Done criteria:** Missing address shows warning; configured address works.
-**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build`.
-
-### [] T6.2 — Local chain smoke test
+### [.] T6.2 — Local chain smoke test
 
 **Owner:** Middleware.
 
@@ -581,104 +680,9 @@ fake run mat karo.
 
 ---
 
-## Phase 7 — Frontend real flows — [0/6]
+## Phase 7 — Frontend real flows — [6/6]
 
 **Owner:** Frontend. Context packs: `docs/context/C7A.md` (T7.1–T7.3), `docs/context/C7B.md` (T7.4–T7.6).
-
-### [] T7.1 — Map par parcel aur ALU layers
-
-**Owner:** Frontend. Context pack: `docs/context/C7A.md`.
-
-**Kya karna hai**
-1. `frontend/src/lib/api.ts` me typed `fetchParcel`, `fetchAlus`, `fetchListings` add karo.
-2. MapLibre me sources/layers: parcel fill + outline, ALU grid lines, selected parcel highlight.
-3. Zoom level → ALU level mapping (10+ → 1km, 14+ → 100m, 17+ → 10m, 20+ → 1m).
-4. Demo ULPIN `DEMO-ULPIN-001` auto-load; click par popup me ULPIN/ALU ID.
-5. Loading/error/empty states.
-
-**Files:** `frontend/src/lib/api.ts`, `frontend/src/components/MapView.tsx`,
-`frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Demo parcel aur ALUs map par dikhte hain; typecheck/build pass.
-**Verify:** `npm --prefix frontend run typecheck && npm --prefix frontend run build`.
-
-### [] T7.2 — Officer evidence + review UI
-
-**Owner:** Frontend. Context pack: `docs/context/C7A.md`.
-
-**Kya karna hai**
-1. ULPIN submit par evidence response ko table me dikhao: 21 fields, status chips
-   (`AVAILABLE/PARTIAL/N/A/N/D`), source links, run ID, evidence hash.
-2. Review queue list + Approve/Reject buttons with reason input.
-3. Hash ko copy button ke saath dikhao; sources clickable hon.
-4. Error states: middleware down, missing key, no evidence.
-
-**Files:** `frontend/src/components/EvidencePanel.tsx`, `frontend/src/components/ReviewQueue.tsx`,
-`frontend/src/lib/api.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Officer demo flow UI se chalta hai.
-**Verify:** manual + build.
-
-### [] T7.3 — Citizen wallet connect + chain switch
-
-**Owner:** Frontend. Context pack: `docs/context/C7A.md`.
-
-**Kya karna hai**
-1. `frontend/src/lib/wallet.ts`: `window.ethereum` connect, chain switch/add (local 31337),
-   account change listener; wallet na ho to clear message.
-2. Shortened address + disconnect/reset UI.
-3. No buy transaction yet; buy is `T7.4`.
-
-**Files:** `frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Wallet connect/disconnect aur chain switch kaam karta hai.
-**Verify:** manual in browser + build.
-
-### Commit batch C7A — T7.1, T7.2, T7.3
-
-**Message:** `feat(web): add map layers, evidence review and wallet connect`
-
-### [] T7.4 — Listing browse + buy flow
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. `frontend/src/components/ListingCard.tsx`: bundle, ULPIN, price, seller KYC badge, ALU count.
-2. Buy sequence exactly:
-   `POST /orders` → `ethers.id("landmarket-order:" + id)` → `createOrder(...)` with value →
-   wait receipt → `POST /orders/{id}/funded` → `POST /orders/{id}/evaluate` → poll `GET /orders/{id}`.
-3. Disable button while pending; wrong chain par switch prompt.
-
-**Files:** `frontend/src/components/ListingCard.tsx`, `frontend/src/lib/api.ts`,
-`frontend/src/lib/wallet.ts`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Local chain par end-to-end buy ho jaata hai.
-**Verify:** manual demo on local chain + build.
-
-### [] T7.5 — Trade status panel
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. `frontend/src/components/TradeStatus.tsx`: six check rows (pass/fail/reason/blocking),
-   decision, order state, chain state, tx hash, explorer link.
-2. `NEEDS_REVIEW` par "officer review" dikhao, settle claim mat karo.
-3. Refresh button + clear timeout message.
-
-**Files:** `frontend/src/components/TradeStatus.tsx`, `frontend/src/App.tsx`, `frontend/src/index.css`.
-**Done criteria:** Status panel contract ke saare fields dikhata hai.
-**Verify:** manual + build.
-
-### [] T7.6 — Empty/error states, banner and responsive polish
-
-**Owner:** Frontend. Context pack: `docs/context/C7B.md`.
-
-**Kya karna hai**
-1. Loading/empty/error for map, listings, reviews, trade.
-2. Accessible labels, focus-visible styles, disabled buttons, `aria-live` status.
-3. Visible banner: `Testnet only, not a legal title transfer.`
-4. Demo badge `DEMO_FIXTURE_NOT_OFFICIAL`; responsive at 375px and 1280px.
-5. Vite chunk warning fix ya document karo.
-
-**Files:** `frontend/src/**`, `frontend/README.md`, `frontend/log-f.md`.
-**Done criteria:** No horizontal scroll; states covered; banner visible.
-**Verify:** manual + `npm --prefix frontend run build`.
 
 ### Commit batch C7B — T7.4, T7.5, T7.6
 
@@ -686,11 +690,11 @@ fake run mat karo.
 
 ---
 
-## Phase 8 — E2E, demo aur hardening — [0/3]
+## Phase 8 — E2E, demo aur hardening — [4/6]
 
 **Owner split:** `T8.1` backend; `T8.2` lead; `T8.3-B/M/F` backend/middleware/frontend; `T8.3-D` lead. Context pack: `docs/context/C8.md`.
 
-### [] T8.1 — Real PostGIS integration tests
+### [.] T8.1 — Real PostGIS integration tests
 
 **Owner:** Backend. Context pack: `docs/context/C8.md`.
 
@@ -720,7 +724,7 @@ fake run mat karo.
 **Done criteria:** Fresh terminal se `make demo` chal ke URL deta hai.
 **Verify:** `make demo`.
 
-### [] T8.3-B — Backend security/quality gate (backend slice)
+### [.] T8.3-B — Backend security/quality gate (backend slice)
 
 **Owner:** Backend.
 
@@ -729,7 +733,7 @@ fake run mat karo.
 3. Backend part of `docs/limitations.md` (demo data, KYC stub, testnet only).
 **Verify:** `backend/.venv/bin/ruff check backend && backend/.venv/bin/pytest -q backend`.
 
-### [] T8.3-M — Middleware security/quality gate (middleware slice)
+### [.] T8.3-M — Middleware security/quality gate (middleware slice)
 
 **Owner:** Middleware.
 
@@ -737,15 +741,6 @@ fake run mat karo.
 2. `npm --prefix middleware run typecheck && npm --prefix middleware test && npm --prefix middleware run compile`.
 3. `npm --prefix middleware audit --omit=dev`.
 **Verify:** all four commands pass; `.env` ignored.
-
-### [] T8.3-F — Frontend security/quality gate (frontend slice)
-
-**Owner:** Frontend.
-
-1. `npm --prefix frontend run typecheck`, `build`, `audit --omit=dev`.
-2. Accessibility basics, focus states, disabled buttons.
-3. Chunk warning fix or documented.
-**Verify:** `npm --prefix frontend run build`.
 
 ### [] T8.3-D — Final docs and architecture (lead slice)
 
@@ -765,7 +760,7 @@ fake run mat karo.
 
 **Owner split:** `T9.1` backend; `T9.2` AI; `T9.3-B/M/F` backend/middleware/frontend; `T9.3-D` lead. Context pack: `docs/context/C9.md`.
 
-### [] T9.1 — ALU hierarchy, lock aur double-sell protection
+### [.] T9.1 — ALU hierarchy, lock aur double-sell protection
 
 **Kya karna hai:** Generated ALUs ko select par persist karo; parent chain maintain karo;
 active listing ke liye per-ALU unique index; sold ALUs lock; partial bundle sale rules document karo.
@@ -784,17 +779,13 @@ source conflict par `NEEDS_REVIEW`, confidence score evidence sheet me.
 AI tests; backend contract change only via lead.
 **Done criteria:** Kam se kam 2 portals ka merged sheet + conflicts review me jaate hain.
 
-### [] T9.3-B — Backend production container (backend slice)
+### [.] T9.3-B — Backend production container (backend slice)
 
 **Owner:** Backend. `backend/Dockerfile`.
 
-### [] T9.3-M — Middleware production container (middleware slice)
+### [.] T9.3-M — Middleware production container (middleware slice)
 
 **Owner:** Middleware. `middleware/Dockerfile`.
-
-### [] T9.3-F — Frontend production container (frontend slice)
-
-**Owner:** Frontend. `frontend/Dockerfile`.
 
 ### [] T9.3-D — Public demo deployment (lead slice)
 

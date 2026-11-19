@@ -94,10 +94,34 @@ backend/.venv/bin/pytest -q backend/tests/test_<area>.py
 backend/.venv/bin/uvicorn app.api.main:app --app-dir backend --reload --port 8000
 ```
 
+## 6. Session start protocol (review loop)
+
+Har session in exact order mein chale:
+
+**(a) RESOLVE** — Pichle session ke open review comments `backend/review-b.md` mein theek karo. Har comment ke liye fix commit hash likho aur `Status: RESOLVED` set karo. `[BLOCKER]` comments pehle resolve karo, tabhi naya task start karo.
+
+**(b) REVIEW** — Pichle session ka `backend/` kaam review karo. Code par **READ-ONLY**: reviewer sirf `backend/review-b.md` edit karegi, source code nahi. Asli `git diff <range>` unreviewed commit range ka padhegi, author's log nahi. `backend/.venv/bin/ruff check backend` aur `backend/.venv/bin/pytest -q backend` chala sakti hai (source mein koi edit nahi).
+
+**(c) WORK** — Plan ka aagla backend task karo.
+
+**(d) LOG** — `backend/log-b.md` update karo aaj ki date/time/session ke saath.
+
+Review entry template (`backend/review-b.md` header mein ye format rakhein):
+
+```
+## R-<n> — reviewing <author-session-id> (commit <abc123>..<def456>) — by <reviewer-session-id>
+Checked: <kya actually kiya gaya: diff read, ruff/pytest aur result, kaunsa api-contract.md section compare kiya>
+- [BLOCKER|MAJOR|NIT] <file>:<line> — <problem + why>. Expected: <contract/rule>
+Verdict: CHANGES_REQUESTED | APPROVED
+Status: OPEN | RESOLVED (fixed in <hash>)
+```
+
+Review file ke top par pointer: `Last reviewed commit: <hash>`. Reviewer source code nahi edit karti; sirf `review-b.md`. Review fix commit message: `fix(scope): resolve R-<n>` (rule 2 ka apvaad).
+
 After `T1.1`, the `Makefile` targets are the short path (`make db-up`, `make db-check`,
 `make seed`, `make api`, `make check`).
 
-## 6. Definition of done
+## 7. Definition of done
 
 - [ ] Code matches the task block and `docs/api-contract.md`.
 - [ ] Tests named in the task pass; `ruff` + `pytest` pass.
@@ -109,7 +133,7 @@ After `T1.1`, the `Makefile` targets are the short path (`make db-up`, `make db-
 - [ ] `npm run sync:docs && npm run check:docs` pass.
 - [ ] Commit uses the batch message from `docs/task-ownership.md`.
 
-## 7. Stop conditions
+## 8. Stop conditions
 
 Stop and write `**BLOCKED:**` in the task block + log if:
 
