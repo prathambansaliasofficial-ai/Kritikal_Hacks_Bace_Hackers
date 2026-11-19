@@ -208,4 +208,3 @@ Kyunki modules real-time sync nahi karte, har module log mein `## NEEDS FROM OTH
 `- [] needs: <target module> | what: <endpoint/field/behaviour> | contract ref: <§> | requested by: <session>`
 
 Delivery hone par `[.]` karo. `npm run sync:docs` inko `<module>/docs/cross-module-needs.md` mein collect karega taaki har module apne docs mein doosre module ki demands dekh sake (root nahi padhna padega). `docs/api-contract.md` sirf source of truth rahegi shapes ke liye; contract-change wala need lead se approve karna hoga.
-

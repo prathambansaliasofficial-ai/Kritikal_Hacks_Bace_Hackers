@@ -117,7 +117,6 @@ async function syncCrossModuleNeeds() {
         `- ${status} needs: ${n.target} | what: ${n.what} | contract ref: ${n.contractRef} | requested by: ${moduleName}`
       );
     }
-    lines.push("");
     const body = lines.join("\n") + "\n";
     const destPath = path.join(ROOT, moduleName, "docs", "cross-module-needs.md");
     await mkdir(path.dirname(destPath), { recursive: true });

@@ -48,4 +48,3 @@ app.include_router(verifications.router, prefix=settings.api_prefix)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Never leak internals: return a generic 500 for any unhandled error."""
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
-
