@@ -1,8 +1,8 @@
-# Limitations — backend (prototype)
+# Limitations (prototype)
 
 This document captures the deliberate scope boundaries of the Land Market
-prototype backend. These are NOT bugs; they are documented prototype decisions
-for the Kritical Hacks 2026 demo (4 Nov 2026).
+prototype. These are NOT bugs; they are documented prototype decisions
+for the Kritical Hacks 2026 demo.
 
 ## 1. Demo data (no official claim)
 
@@ -32,6 +32,7 @@ Evidence is collected by the TinyFish middleware. The backend validates the
 exact 21-field sheet, hashes it (canonical JSON SHA-256 with `0x` prefix), and
 persists it. Missing fields become `N/D`; values are never invented. If the
 TinyFish key is unavailable, tests mock the middleware; no live run is faked.
+Only one source portal is used by default (multi-portal evidence, `T9.2`, is not built).
 
 ## 5. Error handling
 
@@ -42,24 +43,34 @@ middleware/chain calls cause no state change.
 
 ## 6. Validation
 
-- ULPIN: `^[A-Za-z0-9/_.-]+$`, 3–64 chars.
+- ULPIN: `^[A-Za-z0-9/_.-]+$`, 3-64 chars.
 - Wallet: `^0x[a-fA-F0-9]{40}$`.
 - bytes32 (`chain_order_id`/`tx_hash`): `^0x[a-fA-F0-9]{64}$`.
-- bbox: `minLon,minLat,maxLon,maxLat`, ranges `[-180,180]`/`[-90,90]`, min ≤ max.
-- limit: 1–100 (parcels); ALU grid capped at 1500 cells (422 over cap).
+- bbox: `minLon,minLat,maxLon,maxLat`, ranges `[-180,180]`/`[-90,90]`, min <= max.
+- limit: 1-100 (parcels); ALU grid capped at 1500 cells (422 over cap).
 
 ## 7. Partial-bundle sale rules
 
 A listing references a bundle (and optionally a single ALU via `alu_id`). An
-ALU can be in at most one active listing (DRAFT/LISTED/PAUSED) — enforced by a
+ALU can be in at most one active listing (DRAFT/LISTED/PAUSED), enforced by a
 partial unique index on `listings(alu_id)`. A sold ALU (`status = SOLD`) is
-locked and cannot be re-listed — enforced by the repository layer. Listings are
+locked and cannot be re-listed, enforced by the repository layer. Listings are
 bundle-scoped: one active listing per bundle. Partial sale of a bundle (selling
 individual ALUs within an active bundle listing) is NOT supported in this
 prototype; each ALU needs its own active listing to be tradeable.
 
-## 8. Out of scope
+## 8. Security notes for any shared or public deployment
+
+- **Middleware has no authentication.** `POST /escrow/settle` and `POST /escrow/refund` accept any caller that can reach the service and sign with the operator key. It must stay on a private network or `127.0.0.1`; only the backend should call it.
+- **`VITE_OFFICER_TOKEN` is public.** All `VITE_*` values are embedded in the frontend bundle. If it is set, the officer review screen shows and the token is visible to every visitor. Leave it empty on public deployments.
+- **One operator key.** A single key signs every settlement and refund, and the contract's operator is fixed at deploy time (the deploying account). Losing that key means redeploying the contract.
+- **Example defaults are not secrets.** `dev-officer-token` and the local database password `landmarket_dev` are for local use only; change them for any shared environment.
+- **No automated frontend tests.** The frontend is covered by typecheck and build only.
+
+Key handling and hosting steps: `docs/api-keys-setup.md`, `docs/deployment.md`.
+
+## 9. Out of scope
 
 - Real title/registry writes, legal conveyance, mainnet deployment,
-  JWT/OAuth auth, production DB (Supabase migration is post-hackathon),
-  public demo URL (lead's `T9.3-D`).
+  JWT/OAuth auth, production database (Supabase migration is post-hackathon),
+  and a tested public demo deployment.
