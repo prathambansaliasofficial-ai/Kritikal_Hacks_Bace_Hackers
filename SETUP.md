@@ -1,4 +1,4 @@
-# Land Market — setup
+# Land Market: setup
 
 Prototype monorepo for Kritical Hacks 2026: one land parcel (ULPIN) is verified with
 TinyFish, split into tradeable **ALU** units, checked by six fixed rules, and settled
@@ -8,32 +8,20 @@ through a testnet escrow.
 frontend/   React 19 + TS + Vite + MapLibre + log-f.md + AGENTS.md
 backend/    FastAPI + PostGIS + log-b.md + AGENTS.md
 middleware/ TinyFish agent + Fastify API + Hardhat escrow + log-m.md + AGENTS.md
-docs/       contracts, task packs, branch workflow, reference docs
+docs/       architecture, keys, deployment, demo, contracts, reference docs
 ```
 
-Read `docs/team-workflow.md` for branches and `docs/task-ownership.md` for who does what.
+All work is merged into `main`. Clone it and run from there.
 
 ## 1. Prerequisites
 
 - Node 24 (`nvm use` reads `.nvmrc`)
 - Python 3.12+ (tested on 3.14)
 - Docker Desktop (for PostGIS)
-- Foundry not needed; Hardhat is used from `middleware/`
+- MetaMask in your browser (for the buy flow)
+- Foundry is not needed; Hardhat runs from `middleware/`
 
-## 2. Branch setup (do this once)
-
-Wait for the lead's `C0` baseline commit, then:
-
-```bash
-git fetch origin
-git switch main
-git pull --ff-only origin main
-git switch -c backend/<your-name>     # or middleware/<name>, ai/<name>, frontend/<name>
-```
-
-Do not work on `main`. Do not push to `main`.
-
-## 3. Env files
+## 2. Env files and keys
 
 ```bash
 cp .env.example .env
@@ -42,14 +30,26 @@ cp backend/.env.example backend/.env
 cp middleware/.env.example middleware/.env
 ```
 
-- `middleware/.env` needs `TINYFISH_API_KEY` (permanent key from hackathon organizers) for live evidence runs.
-- For blockchain: start `npm --prefix middleware run node`, then
-  `npm --prefix middleware run deploy:local`, and paste the printed address into
-  `middleware/.env` as `ESCROW_CONTRACT_ADDRESS`.
-- The operator key for local dev is Hardhat account #0. Never use a real key.
-- `.env` files are ignored by git. Never force-add them.
+`.env` files are git-ignored. Never force-add them.
 
-## 4. Install
+**Which keys do I need, and where do I get them?** Read [`docs/api-keys-setup.md`](docs/api-keys-setup.md).
+In short:
+
+| Goal | What you need | Guide |
+|---|---|---|
+| Run the app and tests | Nothing external | this file |
+| Live land evidence | TinyFish API key | `docs/keys-tinyfish.md` |
+| Local chain demo | Local Hardhat node, no accounts | `docs/keys-local.md` |
+| Public testnet demo | Sepolia RPC URL, a throwaway operator wallet, test ETH | `docs/keys-sepolia.md` |
+
+After editing env files, validate them (values are never printed):
+
+```bash
+npm run check:env               # local chain
+npm run check:env -- sepolia    # Sepolia testnet
+```
+
+## 3. Install
 
 ```bash
 npm run install:all
@@ -57,58 +57,57 @@ python3 -m venv backend/.venv
 backend/.venv/bin/pip install -r backend/requirements-dev.txt
 ```
 
-## 5. Database
+## 4. Database
 
 ```bash
-docker compose up -d postgis
-docker compose exec -T postgis psql -U landmarket -d landmarket -c "SELECT postgis_version();"
+make db-up        # docker compose up -d postgis
+make db-check     # PostGIS version + tables + row counts
+make seed         # demo parcel DEMO-ULPIN-001 + ALUs
 ```
 
-Schema loads automatically on the first container start from `backend/db/001_init.sql`.
-To re-apply manually:
+The schema files in `backend/db/` load automatically on the first container start.
+`make db-reset && make seed` is the clean demo path (it asks before deleting the volume).
+
+## 5. Chain (local)
 
 ```bash
-docker compose exec -T postgis psql -U landmarket -d landmarket < backend/db/001_init.sql
+npm --prefix middleware run node            # terminal 1
+npm --prefix middleware run deploy:local    # terminal 2, prints the contract address
 ```
 
-Later migrations (`002_seed_demo.sql`, `003_bundles.sql`, ...) are applied by the
-task that creates them. `make db-reset && make seed` is the clean demo path once
-`T1.1`/`T1.3` are done.
+Put the address in `middleware/.env` (`ESCROW_CONTRACT_ADDRESS`) and `frontend/.env`
+(`VITE_ESCROW_ADDRESS`). Details and the operator key: `docs/keys-local.md`.
+For Sepolia use `docs/keys-sepolia.md` instead.
 
-## 6. Run (3 terminals, from repo root)
+## 6. Run (3 terminals, from the repo root)
 
 ```bash
-# terminal 1 — backend
+# terminal 1: backend  (http://localhost:8000, API docs at /docs)
 backend/.venv/bin/uvicorn app.api.main:app --app-dir backend --reload --port 8000
 
-# terminal 2 — middleware
-npm run dev:middleware                                  # http://127.0.0.1:8090
+# terminal 2: middleware  (http://127.0.0.1:8090)
+npm run dev:middleware
 
-# terminal 3 — frontend
-npm run dev:frontend                                    # http://localhost:5173
-```
-
-Chain (optional, separate terminal):
-
-```bash
-npm --prefix middleware run node
-npm --prefix middleware run deploy:local
+# terminal 3: frontend  (http://localhost:5173)
+npm run dev:frontend
 ```
 
 `--app-dir backend` is required because the Python package lives in `backend/app`.
-Do not run `uvicorn` from the repo root without it.
+Restart a service after changing its `.env` file.
 
 ## 7. Checks
 
 ```bash
 npm run typecheck
 npm run check:docs
+npm run check:env
 npm --prefix frontend run build
 npm --prefix middleware run compile
 npm --prefix middleware test
 backend/.venv/bin/ruff check backend
 backend/.venv/bin/pytest -q backend
-npm --prefix middleware run smoke:tinyfish   # needs a real TINYFISH_API_KEY
+make test-integration                          # needs the database running
+npm --prefix middleware run smoke:tinyfish     # needs a real TinyFish key
 ```
 
 `smoke:tinyfish` fails without a key by design: it proves the real integration is wired.
@@ -116,32 +115,39 @@ Never replace it with a fake pass.
 
 ## 8. Demo flow
 
-1. Frontend par ULPIN daalo → PostGIS se parcel/ALU bounds.
-2. Backend middleware ko `POST /verify/evidence` bhejta hai.
-3. TinyFish 21 fields laata hai; sheet evidence hash ke saath attach hoti hai.
-4. 6 checks pass → escrow `settle()`. Fail/ambiguous → `refund()` ya officer queue.
-5. Har settlement ka event chain par, UI me tx hash.
+The full 7-step demo, with setup and fallbacks, is in [`docs/demo-script.md`](docs/demo-script.md).
+In short:
 
-Abhi implement nahi hua: JWT/KYC, real portal auth, title registry writes, mainnet,
-aur 6 checks ki actual rule engine (`app/api/routes/verifications.py` me TODO).
+1. The frontend shows the parcel and its ALU grid from PostGIS.
+2. The backend asks the middleware to collect evidence; TinyFish returns the 21-field sheet, stored with its hash.
+3. An officer reviews the evidence.
+4. The buyer's wallet sends the price into the escrow contract.
+5. The backend runs the six checks. `APPROVED` calls `settle()`, `REJECTED` calls `refund()`, missing evidence goes to officer review.
+6. The UI shows the order state and the transaction hash.
+
+What is intentionally not real (demo data, KYC stub, testnet only): [`docs/limitations.md`](docs/limitations.md).
 
 ## 9. If something breaks
 
 | Symptom | Fix |
 |---|---|
-| `ModuleNotFoundError: app` | run uvicorn with `--app-dir backend` |
-| `postgis_version()` fails | `docker compose up -d postgis` and wait for healthy |
-| frontend API calls fail | backend not on `:8000` or `VITE_API_BASE_URL` wrong |
-| `TINYFISH_API_KEY is not set` | add `TINYFISH_API_KEY` (permanent hackathon key) to `middleware/.env` |
-| `npm run sync:docs` fails | you are not at repo root, or `scripts/` is missing |
-| module copy is stale | run `npm run sync:docs`, never hand-edit the copy |
+| `ModuleNotFoundError: app` | Run uvicorn with `--app-dir backend` |
+| `postgis_version()` fails | `make db-up` and wait for healthy |
+| Frontend API calls fail | Backend not on `:8000`, or `VITE_API_BASE_URL` is wrong |
+| Browser blocks API calls (CORS) | Add the frontend URL to `CORS_ORIGINS` in `backend/.env` |
+| `TINYFISH_API_KEY is not set` | Add it to `middleware/.env` and restart; see `docs/keys-tinyfish.md` |
+| UI says escrow address not configured | Set `VITE_ESCROW_ADDRESS` in `frontend/.env`, restart the frontend |
+| Settlement reverts | `OPERATOR_PRIVATE_KEY` must be the key that deployed the contract |
+| `npm run sync:docs` fails | You are not at the repo root, or `scripts/` is missing |
+| Module copy is stale | Run `npm run sync:docs`; never hand-edit the copy |
 
-## 10. Future infrastructure (after 4 Nov hackathon)
+More key-related errors: the troubleshooting tables in `docs/keys-sepolia.md` and `docs/keys-tinyfish.md`.
 
-- **Database**: Migrate from local PostGIS (Docker) to Supabase. Update `DATABASE_URL` in `backend/.env` to Supabase connection string.
-- **Frontend deployment**: Deploy to Vercel. Set `VITE_API_BASE_URL` to production backend URL.
-- **Middleware deployment**: Deploy middleware service (Railway/Render/Vercel) and set `ESCROW_CONTRACT_ADDRESS` to deployed contract.
-- These are NOT part of the hackathon demo (4 Nov). Tests and verifications happen on 5 Nov.
+## 10. Deploying
+
+Hosting steps, where each secret lives, and the security rules are in
+[`docs/deployment.md`](docs/deployment.md). Two rules matter most: keep the middleware private,
+and leave `VITE_OFFICER_TOKEN` empty on any public frontend.
 
 For module-only commands, read `frontend/SETUP.md`, `backend/SETUP.md`, or
 `middleware/SETUP.md`.
