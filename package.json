@@ -10,6 +10,7 @@
     "typecheck": "npm --prefix frontend run typecheck && npm --prefix middleware run typecheck",
     "test:middleware": "npm --prefix middleware run test",
     "sync:docs": "node scripts/sync-docs.mjs",
-    "check:docs": "node scripts/check-docs.mjs"
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:env": "node scripts/check-env.mjs"
   }
 }
