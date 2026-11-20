@@ -1,6 +1,9 @@
+import "dotenv/config";
 import { configVariable, defineConfig } from "hardhat/config";
 import hardhatToolboxMochaEthers from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 
+// dotenv loads middleware/.env so SEPOLIA_RPC_URL and DEPLOYER_PRIVATE_KEY
+// are visible to configVariable() when you run deploy:sepolia.
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthers],
   solidity: {
