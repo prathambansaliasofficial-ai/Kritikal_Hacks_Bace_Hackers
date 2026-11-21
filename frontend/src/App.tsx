@@ -10,6 +10,7 @@ import {
   fetchListings,
   createOrderApi,
   fundOrderApi,
+  demoPayOrderApi,
   evaluateOrderApi,
   fetchOrderApi,
   requestVerification,
@@ -17,7 +18,13 @@ import {
   type Listing,
   type Order,
 } from "./lib/api";
-import { isChainConfigured, chainWarning, chainConfig } from "./lib/chain";
+import {
+  isChainConfigured,
+  chainWarning,
+  chainConfig,
+  isDemoPayment,
+  demoBuyerWallet,
+} from "./lib/chain";
 import {
   connectWallet,
   switchToConfiguredChain,
@@ -39,7 +46,9 @@ type VerifyState =
   | { phase: "error"; message: string };
 
 const OFFICER_TOKEN = import.meta.env.VITE_OFFICER_TOKEN ?? "";
-const DEMO_BANNER = "Testnet only, not a legal title transfer.";
+const DEMO_BANNER = isDemoPayment
+  ? "DEMO PAYMENT MODE: simulated escrow, no real money moves. Not a legal title transfer."
+  : "Testnet only, not a legal title transfer.";
 
 type BuyStatus = "idle" | "creating" | "funding" | "evaluating" | "polling" | "settled" | "failed";
 
@@ -138,8 +147,18 @@ export default function App() {
   }
 
   async function handleBuy(listing: Listing) {
-    if (wallet.phase !== "connected") {
-      setBuyError("Connect your wallet first.");
+    const buyerAccount =
+      wallet.phase === "connected"
+        ? wallet.account
+        : isDemoPayment
+          ? demoBuyerWallet
+          : "";
+    if (!buyerAccount) {
+      setBuyError(
+        isDemoPayment
+          ? "Demo buyer wallet not set. Set VITE_DEMO_BUYER_WALLET in frontend/.env."
+          : "Connect your wallet first.",
+      );
       return;
     }
     if (!isChainConfigured) {
@@ -152,7 +171,7 @@ export default function App() {
 
     try {
       setBuyStatus("creating");
-      const order = await createOrderApi(listing.id, wallet.account);
+      const order = await createOrderApi(listing.id, buyerAccount);
       if (!order.evidence_hash) {
         setBuyStatus("failed");
         setBuyError("Evidence hash not set on order. Verify the parcel first.");
@@ -161,14 +180,18 @@ export default function App() {
 
       setBuyStatus("funding");
       const orderIdHex = chainOrderId(order.id);
-      const txHash = await createOrder({
-        orderId: orderIdHex,
-        seller: order.seller_wallet,
-        evidenceHash: order.evidence_hash,
-        valueWei: order.amount_wei,
-      });
+      if (isDemoPayment) {
+        await demoPayOrderApi(order.id, orderIdHex);
+      } else {
+        const txHash = await createOrder({
+          orderId: orderIdHex,
+          seller: order.seller_wallet,
+          evidenceHash: order.evidence_hash,
+          valueWei: order.amount_wei,
+        });
 
-      await fundOrderApi(order.id, orderIdHex, txHash);
+        await fundOrderApi(order.id, orderIdHex, txHash);
+      }
 
       setBuyStatus("evaluating");
       const evaluated = await evaluateOrderApi(order.id);
@@ -259,7 +282,14 @@ export default function App() {
         <div className="status-row">
           <StatusPill label="API" value={health.phase} />
           <StatusPill label="PostGIS" value={dbStatus} />
-          <WalletPill wallet={wallet} onConnect={handleConnectWallet} onDisconnect={disconnectWallet} />
+          {isDemoPayment && wallet.phase !== "connected" ? (
+            <span className="pill good" role="status">
+              <span className="dot" />
+              Demo buyer: {demoBuyerWallet ? shortenAddress(demoBuyerWallet) : "not set"}
+            </span>
+          ) : (
+            <WalletPill wallet={wallet} onConnect={handleConnectWallet} onDisconnect={disconnectWallet} />
+          )}
         </div>
       </header>
 
