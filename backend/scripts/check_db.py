@@ -38,10 +38,7 @@ def main() -> int:
                 version = row[0] if row else None
                 print(f"postgis_version={version}")
                 for table in EXPECTED_TABLES:
-                    query = sql.SQL("SELECT to_regclass({})").format(
-                        sql.Identifier(table)
-                    )
-                    cursor.execute(query)
+                    cursor.execute("SELECT to_regclass(%s)", (table,))
                     exists = cursor.fetchone()[0] is not None
                     if not exists:
                         print(f"table={table} missing")

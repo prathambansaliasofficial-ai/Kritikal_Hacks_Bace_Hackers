@@ -43,7 +43,19 @@ export function MapView() {
 
     const map = new MapLibreMap({
       container: containerRef.current,
-      style: "https://demotiles.maplibre.org/style.json",
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            maxzoom: 19,
+            attribution: "© OpenStreetMap contributors",
+          },
+        },
+        layers: [{ id: "osm", type: "raster", source: "osm" }],
+      },
       center: PILOT_CENTER,
       zoom: 12,
     });
@@ -84,6 +96,17 @@ export function MapView() {
 
       setLoading(false);
       void loadParcel(DEMO_ULPIN);
+
+      // Draw the ALU grid for the opening view too, not only after a zoom.
+      const level = levelForZoom(map.getZoom());
+      currentLevelRef.current = level;
+      if (level) {
+        const bounds = map.getBounds();
+        void loadAlus(
+          [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
+          level,
+        );
+      }
     });
 
     map.on("zoom", () => {

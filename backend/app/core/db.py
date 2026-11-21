@@ -34,11 +34,11 @@ def check_database() -> dict[str, Any]:
     try:
         with db_connection() as connection:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT postgis_version()")
+                cursor.execute("SELECT postgis_version() AS version")
                 row = cursor.fetchone()
         return {
             "status": "ok",
-            "postgis_version": row[0] if row else None,
+            "postgis_version": row["version"] if row else None,
             "error": None,
         }
     except Exception as error:  # noqa: BLE001 - health probe must not crash the app
