@@ -2,6 +2,7 @@
 // Checks the three .env files for a given mode. Never prints secret values.
 // Usage: npm run check:env            (local Hardhat chain)
 //        npm run check:env -- sepolia (Sepolia testnet)
+//        npm run check:env -- demo    (simulated demo payment, no chain)
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,8 +10,8 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.CHECK_ENV_ROOT ?? path.resolve(HERE, "..");
 const mode = (process.argv[2] ?? "local").toLowerCase();
-if (!["local", "sepolia"].includes(mode)) {
-  console.error(`Unknown mode "${mode}". Use: local | sepolia`);
+if (!["local", "sepolia", "demo"].includes(mode)) {
+  console.error(`Unknown mode "${mode}". Use: local | sepolia | demo`);
   process.exit(2);
 }
 
@@ -81,6 +82,12 @@ if (fe.VITE_OFFICER_TOKEN) {
   warn("VITE_OFFICER_TOKEN is set: it is public in the built frontend. Leave it empty on any public deployment.");
 }
 
+if (mode === "demo") {
+  (mw.DEMO_PAYMENT === "true" ? pass : fail)("middleware DEMO_PAYMENT=true");
+  (fe.VITE_DEMO_PAYMENT === "true" ? pass : fail)("frontend VITE_DEMO_PAYMENT=true");
+  if (isAddr(fe.VITE_DEMO_BUYER_WALLET)) pass("VITE_DEMO_BUYER_WALLET looks valid");
+  else fail("VITE_DEMO_BUYER_WALLET must be a 0x address of a KYC-VERIFIED buyer");
+} else {
 // Chain
 const wantChain = mode === "sepolia" ? "11155111" : "31337";
 (mw.CHAIN_ID === wantChain ? pass : fail)(`middleware CHAIN_ID is ${wantChain}`);
@@ -114,6 +121,8 @@ if (mode === "sepolia") {
   if (fe.VITE_EXPLORER_URL) pass("VITE_EXPLORER_URL is set");
   else warn("VITE_EXPLORER_URL is empty: no explorer links in the UI (use https://sepolia.etherscan.io)");
   if (!(be.CORS_ORIGINS ?? "").trim()) warn("backend CORS_ORIGINS is empty");
+}
+
 }
 
 console.log(`\n${fails} FAIL, ${warns} WARN. Values are never printed. Guide: docs/api-keys-setup.md`);
