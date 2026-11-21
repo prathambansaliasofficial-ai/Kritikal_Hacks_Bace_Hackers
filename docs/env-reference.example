@@ -1,0 +1,130 @@
+# =====================================================================
+# LAND MARKET: MASTER ENV REFERENCE (names only, no real values)
+#
+# HOW TO USE THIS FILE
+#  1. Copy this text into a PRIVATE place (a notes app or a local file on your computer).
+#  2. Fill in the values THERE. Never type real values into this file on GitHub:
+#     this repository is public and anyone could read them.
+#  3. Then paste each value where it belongs (see the WHERE column):
+#       .env   = a local file named .env inside that service folder (git-ignored)
+#       HOST   = your hosting provider's Environment Variables / Secrets page
+#       GH     = GitHub: Settings > Secrets and variables > Actions (only for workflows)
+#  4. Check your local files with: npm run check:env   (or -- sepolia / -- demo)
+#
+# Guides: docs/api-keys-setup.md  docs/keys-tinyfish.md  docs/keys-sepolia.md
+#         docs/demo-payment-mode.md  docs/deployment.md
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# INTEGRATIONS USED BY THIS PROJECT
+#
+#  1. TinyFish Web Agent    live land evidence (21-field sheet)   NEEDS A KEY
+#  2. PostGIS (Postgres)    parcels, ALUs, orders                 local Docker = no key; hosted (e.g. Supabase) = a URL
+#  3. Ethereum Sepolia      testnet escrow contract               NEEDS RPC URL + wallet key (skip in demo payment mode)
+#     via Alchemy/Infura    RPC provider                          free account
+#  4. MetaMask              buyer wallet in the browser           no key to paste (skip in demo payment mode)
+#  5. Hardhat local chain   local test chain                      no key (public test accounts)
+#  6. MapLibre map tiles    map background                        no key
+#  7. Etherscan (Sepolia)   transaction links in the UI           no key, just a URL
+#  8. GitHub                code + optional Actions secrets       no key for the app itself
+#  9. Frontend host         e.g. Vercel / Netlify / Cloudflare    account only; add VITE_* variables there
+# 10. Backend/middleware host (Render, Railway, a VM)            account only; add secrets there
+#
+# Not used: OpenAI, Anthropic, Stripe/Razorpay or any payment gateway, Etherscan API key.
+# ---------------------------------------------------------------------
+
+
+# =====================================================================
+# A. MIDDLEWARE   (WHERE: middleware/.env  or  HOST secrets)
+# =====================================================================
+PORT=8090
+# Keep 127.0.0.1. No authentication on settle/refund: never expose publicly.
+HOST=127.0.0.1
+
+# --- Demo payment (no wallet, no gas). true for presentations, empty for real chain ---
+DEMO_PAYMENT=
+
+# --- TinyFish (SECRET). Get: https://agent.tinyfish.ai/api-keys  (shown once) ---
+TINYFISH_API_KEY=
+TINYFISH_URL=
+DEFAULT_SOURCE_URL=https://bhunaksha.nic.in/bhunaksha/
+TINYFISH_TIMEOUT_MS=290000
+
+# --- Chain (real mode only). Local: 31337 + http://127.0.0.1:8545. Sepolia: 11155111 ---
+CHAIN_ID=31337
+CHAIN_RPC_URL=http://127.0.0.1:8545
+# Filled after you deploy the contract
+ESCROW_CONTRACT_ADDRESS=
+# SECRET. Throwaway wallet key. Must be the SAME account that deployed the contract.
+OPERATOR_PRIVATE_KEY=
+
+# --- Sepolia deploy only ---
+# SECRET (contains your provider key). Get from Alchemy or Infura: Ethereum Sepolia HTTPS URL.
+SEPOLIA_RPC_URL=
+# SECRET. Throwaway wallet key with Sepolia test ETH. Same value as OPERATOR_PRIVATE_KEY.
+DEPLOYER_PRIVATE_KEY=
+
+
+# =====================================================================
+# B. BACKEND   (WHERE: backend/.env  or  HOST secrets)
+# =====================================================================
+APP_ENV=development
+# Local Docker default shown. Hosted database: paste its connection string (SECRET).
+DATABASE_URL=postgresql://landmarket:landmarket_dev@localhost:5432/landmarket
+# Private address of the middleware. Never a public URL.
+MIDDLEWARE_URL=http://127.0.0.1:8090
+MIDDLEWARE_TIMEOUT_SECONDS=90
+# Allowed frontend origins, comma separated. Add your deployed frontend URL.
+CORS_ORIGINS=http://localhost:5173
+# SECRET-ish demo token for officer actions. Make up a random string.
+DEV_OFFICER_TOKEN=
+
+
+# =====================================================================
+# C. FRONTEND   (WHERE: frontend/.env  or  HOST build settings)
+# Every VITE_* value is PUBLIC in the built website. Never put a secret here.
+# =====================================================================
+# Public URL of the backend (for example https://your-backend.example.com)
+VITE_API_BASE_URL=http://localhost:8000
+# Same address as ESCROW_CONTRACT_ADDRESS (real mode only)
+VITE_ESCROW_ADDRESS=
+# Local: 31337 / Hardhat Local / empty.  Sepolia: 11155111 / Sepolia / https://sepolia.etherscan.io
+VITE_CHAIN_ID=31337
+VITE_CHAIN_NAME=Hardhat Local
+VITE_EXPLORER_URL=
+# Demo payment mode (presentations only)
+VITE_DEMO_PAYMENT=
+# Any KYC-verified buyer address, for example 0x1111111111111111111111111111111111111111
+VITE_DEMO_BUYER_WALLET=
+# Local demo only. LEAVE EMPTY on a public site (it would be visible to everyone).
+VITE_OFFICER_TOKEN=
+
+
+# =====================================================================
+# D. ROOT .env   (WHERE: .env at repo root, local Docker database only)
+# =====================================================================
+POSTGRES_DB=landmarket
+POSTGRES_USER=landmarket
+POSTGRES_PASSWORD=landmarket_dev
+POSTGRES_PORT=5432
+
+
+# =====================================================================
+# E. GITHUB SECRETS   (WHERE: GH. Only if you add a GitHub Actions workflow)
+# Use exactly these names:
+#   TINYFISH_API_KEY
+#   SEPOLIA_RPC_URL
+#   DEPLOYER_PRIVATE_KEY
+# =====================================================================
+
+
+# =====================================================================
+# WHAT YOU ACTUALLY NEED FOR EACH GOAL
+#  Run the demo with simulated payment : TINYFISH_API_KEY, DEV_OFFICER_TOKEN, DEMO_PAYMENT,
+#                                         VITE_DEMO_PAYMENT, VITE_DEMO_BUYER_WALLET
+#  Real local chain                    : above minus DEMO_*, plus ESCROW_CONTRACT_ADDRESS,
+#                                         OPERATOR_PRIVATE_KEY (public Hardhat test key)
+#  Sepolia testnet                     : TINYFISH_API_KEY, SEPOLIA_RPC_URL, DEPLOYER_PRIVATE_KEY,
+#                                         OPERATOR_PRIVATE_KEY (same), ESCROW_CONTRACT_ADDRESS,
+#                                         VITE_ESCROW_ADDRESS, VITE_CHAIN_ID=11155111
+# =====================================================================
