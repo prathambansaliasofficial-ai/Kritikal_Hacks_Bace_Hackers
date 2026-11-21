@@ -24,7 +24,12 @@ from app.repositories import (
     users as users_repo,
 )
 from app.repositories.orders import OrderError
-from app.services.chain_client import ChainClientError, get_chain_state
+from app.services.chain_client import (
+    ChainClientError,
+    DemoPaymentDisabledError,
+    demo_fund,
+    get_chain_state,
+)
 from app.services.checks import (
     check_results_to_api,
     decide,
@@ -43,6 +48,10 @@ class OrderCreate(BaseModel):
 class OrderFunded(BaseModel):
     chain_order_id: str
     tx_hash: str
+
+
+class OrderDemoPay(BaseModel):
+    chain_order_id: str
 
 
 def _order_shape(row: dict[str, Any]) -> dict[str, Any]:
@@ -85,6 +94,34 @@ def fund_order(
         row = orders_repo.fund_order(
             order_id, payload.chain_order_id, payload.tx_hash
         )
+    except OrderError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.detail) from error
+    if row is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return _order_shape(row)
+
+
+@router.post("/orders/{order_id}/demo-pay")
+async def demo_pay_order(
+    order_id: int = Path(...), payload: OrderDemoPay | None = None
+) -> dict[str, Any]:
+    """DEMO PAYMENT: simulate the buyer paying into escrow, then mark FUNDED.
+
+    Works only when the middleware runs with DEMO_PAYMENT=true. No wallet,
+    gas, payment gateway or real money is involved.
+    """
+    if payload is None:
+        raise HTTPException(status_code=422, detail="chain_order_id required")
+    if orders_repo.get_order(order_id) is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    try:
+        tx_hash = await demo_fund(payload.chain_order_id)
+    except DemoPaymentDisabledError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ChainClientError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    try:
+        row = orders_repo.fund_order(order_id, payload.chain_order_id, tx_hash)
     except OrderError as error:
         raise HTTPException(status_code=error.status_code, detail=error.detail) from error
     if row is None:
