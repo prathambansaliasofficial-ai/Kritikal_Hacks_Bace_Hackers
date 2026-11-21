@@ -9,6 +9,10 @@ class ChainClientError(Exception):
     """Raised when the escrow chain cannot be reached or returns an error."""
 
 
+class DemoPaymentDisabledError(ChainClientError):
+    """Raised when the middleware is not running in DEMO_PAYMENT mode."""
+
+
 async def get_chain_state(chain_order_id: str) -> int:
     """Call middleware GET /escrow/status/{orderId}; return the chain state int.
 
@@ -36,3 +40,35 @@ async def get_chain_state(chain_order_id: str) -> int:
     if not isinstance(state, int):
         raise ChainClientError("Chain status response missing state")
     return state
+
+
+async def demo_fund(chain_order_id: str) -> str:
+    """Simulate the buyer paying into escrow (DEMO_PAYMENT mode only).
+
+    Calls middleware POST /escrow/demo-fund and returns the simulated tx hash.
+    No real payment, wallet or gateway is involved.
+    """
+    settings = get_settings()
+    url = f"{settings.middleware_url.rstrip('/')}/escrow/demo-fund"
+    try:
+        async with httpx.AsyncClient(
+            timeout=settings.middleware_timeout_seconds
+        ) as client:
+            response = await client.post(url, json={"orderId": chain_order_id})
+    except httpx.RequestError as error:
+        raise ChainClientError(str(error)) from error
+
+    if response.status_code == 403:
+        raise DemoPaymentDisabledError(
+            "Demo payment is disabled. Set DEMO_PAYMENT=true in middleware/.env."
+        )
+    if response.status_code >= 400:
+        raise ChainClientError(
+            f"Demo payment error ({response.status_code}): {response.text}"
+        )
+
+    body = response.json()
+    tx_hash = body.get("txHash") or body.get("tx_hash")
+    if not isinstance(tx_hash, str):
+        raise ChainClientError("Demo payment response missing txHash")
+    return tx_hash
