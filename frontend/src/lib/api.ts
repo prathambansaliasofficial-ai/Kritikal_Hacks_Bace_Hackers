@@ -263,6 +263,17 @@ export function fundOrderApi(
   });
 }
 
+/** DEMO PAYMENT: simulated escrow payment (middleware must run with DEMO_PAYMENT=true). */
+export function demoPayOrderApi(
+  orderId: number,
+  chainOrderId: string,
+): Promise<Order> {
+  return request<Order>(`/api/v1/orders/${orderId}/demo-pay`, {
+    method: "POST",
+    body: JSON.stringify({ chain_order_id: chainOrderId }),
+  });
+}
+
 export function evaluateOrderApi(orderId: number): Promise<Order> {
   return request<Order>(`/api/v1/orders/${orderId}/evaluate`, {
     method: "POST",
