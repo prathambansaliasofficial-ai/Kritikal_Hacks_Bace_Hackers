@@ -5,7 +5,13 @@ export const chainConfig = {
   explorerUrl: import.meta.env.VITE_EXPLORER_URL ?? "",
 };
 
-export const isChainConfigured = Boolean(chainConfig.escrowAddress);
+// DEMO PAYMENT MODE: simulated escrow, no wallet, no gas, no payment gateway.
+// Set VITE_DEMO_PAYMENT=true and VITE_DEMO_BUYER_WALLET (a KYC-verified buyer).
+export const isDemoPayment = import.meta.env.VITE_DEMO_PAYMENT === "true";
+export const demoBuyerWallet: string = import.meta.env.VITE_DEMO_BUYER_WALLET ?? "";
+
+export const isChainConfigured =
+  isDemoPayment || Boolean(chainConfig.escrowAddress);
 
 export const chainWarning = isChainConfigured
   ? null
