@@ -19,7 +19,7 @@ Prototype for **Kritical Hacks 2026**: a land-parcel marketplace where a governm
 1. **Setup and run commands:** [`SETUP.md`](SETUP.md)
 2. **Keys and wallets (what to get, where to put it):** [`docs/api-keys-setup.md`](docs/api-keys-setup.md)
 3. **Check your env files:** `npm run check:env` (add `-- sepolia` for the testnet)
-4. **Run the demo:** [`docs/demo-script.md`](docs/demo-script.md)
+4. **Run the demo:** [`docs/demo-script.md`](docs/demo-script.md), or the fast path with a simulated payment: [`docs/demo-payment-mode.md`](docs/demo-payment-mode.md)
 
 ## Repository layout
 
@@ -47,6 +47,7 @@ shared `docs/` contract files. Refresh them with `npm run sync:docs`; verify wit
 | Local chain setup | [`docs/keys-local.md`](docs/keys-local.md) |
 | Sepolia wallets, RPC, faucet, deploy | [`docs/keys-sepolia.md`](docs/keys-sepolia.md) |
 | Hosting and secret handling | [`docs/deployment.md`](docs/deployment.md) |
+| **Quick demo with simulated payment (no wallet, no gas)** | [`docs/demo-payment-mode.md`](docs/demo-payment-mode.md) |
 | The 7-step demo | [`docs/demo-script.md`](docs/demo-script.md) |
 | Final delivery checklist | [`docs/submission-checklist.md`](docs/submission-checklist.md) |
 | API shapes | [`docs/api-contract.md`](docs/api-contract.md) |
