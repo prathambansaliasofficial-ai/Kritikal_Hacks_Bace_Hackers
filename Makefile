@@ -1,6 +1,9 @@
-.PHONY: db-up db-check db-reset seed api mid web check node deploy:local chain:smoke chain dev install mid-check
+.PHONY: db-up db-check db-reset seed api mid web check node deploy-local chain-smoke chain dev install mid-check
 
 COMPOSE ?= docker compose
+# Use the backend virtualenv so `make seed` / `make db-check` do not depend on
+# whatever `python` happens to be on PATH.
+PY ?= backend/.venv/bin/python
 
 # --- database --------------------------------------------------------------
 
@@ -8,7 +11,7 @@ db-up:
 	docker compose up -d postgis
 
 db-check:
-	PYTHONPATH=backend python backend/scripts/check_db.py
+	PYTHONPATH=backend $(PY) backend/scripts/check_db.py
 
 db-reset:
 	@read -p "This deletes the PostGIS volume and ALL data. Continue? [y/N] " confirm; \
@@ -19,7 +22,7 @@ db-reset:
 # --- demo seed -------------------------------------------------------------
 
 seed:
-	PYTHONPATH=backend python backend/scripts/seed.py
+	PYTHONPATH=backend $(PY) backend/scripts/seed.py
 
 # --- services --------------------------------------------------------------
 
@@ -37,13 +40,14 @@ web:
 node:
 	npm --prefix middleware run node
 
-deploy:local:
+deploy-local:
 	npm --prefix middleware run deploy:local
 
-chain:smoke:
+chain-smoke:
 	npm --prefix middleware run chain:smoke
 
-chain: deploy:local chain:smoke
+# `make chain` needs the Hardhat node running in another terminal.
+chain: deploy-local chain-smoke
 
 dev:
 	npm --prefix middleware run dev
