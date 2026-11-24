@@ -1,61 +1,33 @@
 # Land Market
 
-Prototype for **Kritical Hacks 2026**: a land-parcel marketplace where a government
-**ULPIN** is verified with **TinyFish**-collected evidence, split into tradeable
-**ALU** units, checked by six fixed rules, and settled through a testnet escrow.
+**A land-parcel marketplace prototype built for Kritikal Hacks 2026 by Team Bace Hackers.**
 
-> Prototype only. Demo records are not official government data, and a blockchain
-> receipt is not a legal title transfer.
+A government land identifier (**ULPIN**) is verified using evidence collected by **TinyFish**, divided into tradeable **ALU** units (Automated Land Units), checked against six fixed rules, and settled through a testnet escrow contract.
 
-## Current status (2026-11-20)
+> **Prototype only.** Demo records are fictional and are not official government data. A blockchain receipt is not a legal title transfer. See [`docs/limitations.md`](docs/limitations.md).
 
-- All module branches are merged into `main`; `main` is the delivery branch.
-- 37 of 43 roadmap tasks are done (about 86 percent). Backend and frontend are feature complete; the middleware core works locally.
-- Still open: live TinyFish proof (`T3.1`) and Sepolia deployment (`T6.3`), both waiting on API keys, plus the one-command demo runner (`T8.2`) and a public deployment (`T9.3-D`).
-- Details: [`docs/status.md`](docs/status.md). Honest limits: [`docs/limitations.md`](docs/limitations.md).
+Concept overview: [Bhoomi 2.0](https://github.com/prathambansaliasofficial-ai/Bhoomi2.0).
 
-## Get running
+## Status (as of 20 November 2026)
 
-1. **Setup and run commands:** [`SETUP.md`](SETUP.md)
-2. **Keys and wallets (what to get, where to put it):** [`docs/api-keys-setup.md`](docs/api-keys-setup.md)
-3. **Check your env files:** `npm run check:env` (add `-- sepolia` for the testnet)
-4. **Run the demo:** [`docs/demo-script.md`](docs/demo-script.md), or the fast path with a simulated payment: [`docs/demo-payment-mode.md`](docs/demo-payment-mode.md)
+- All module branches are merged into `main`, the delivery branch.
+- 37 of 43 roadmap tasks are complete (about 86%). Backend and frontend are feature-complete; the middleware core runs locally.
+- **Open items:** live TinyFish proof (`T3.1`) and Sepolia deployment (`T6.3`), both awaiting API keys; a one-command demo runner (`T8.2`); and a public deployment (`T9.3-D`).
+- Details: [`docs/status.md`](docs/status.md).
 
-## Repository layout
+## System Overview
 
-| Path | What lives here |
-|---|---|
-| `frontend/` | React + TypeScript + Vite + MapLibre app, `log-f.md`, `AGENTS.md`, `SETUP.md` |
-| `backend/` | FastAPI + PostGIS API, schema, tests, `log-b.md`, `AGENTS.md`, `SETUP.md` |
-| `middleware/` | TinyFish evidence service, Fastify API, Hardhat escrow, `log-m.md`, `AGENTS.md`, `SETUP.md` |
-| `docs/` | Contracts, decisions, architecture, keys, deployment, demo, task context packs |
-| `scripts/` | `sync-docs`, `check-docs`, `check-env` |
-| `whole_plan.md` | Master roadmap with task IDs (its progress header is stale; see `docs/status.md`) |
-| `SETUP.md` | Local setup and run commands |
+| Module | Technology | Responsibility |
+|---|---|---|
+| `frontend/` | React, TypeScript, Vite, MapLibre | Marketplace interface and map view |
+| `backend/` | FastAPI, PostgreSQL + PostGIS | API, schema, trade rule engine, tests |
+| `middleware/` | TinyFish service, Fastify, Hardhat | Evidence collection and hashing; Solidity escrow on the Sepolia testnet |
+| `docs/` | Markdown | Contracts, decisions, architecture, deployment, demo scripts |
+| `scripts/` | Node | `sync-docs`, `check-docs`, `check-env` utilities |
 
-Each module folder also contains generated read-only copies of `whole_plan.md` and the
-shared `docs/` contract files. Refresh them with `npm run sync:docs`; verify with
-`npm run check:docs`. Never edit a generated copy.
+**Trade rules (six fixed checks):** `LISTED`, `BUNDLE_INTACT`, `KYC_WALLET`, `ZONING_OK`, `FUNDS_IN_ESCROW`, `TRADE_MATCH`.
 
-## Documentation index
-
-| Topic | File |
-|---|---|
-| How the pieces fit together | [`docs/architecture.md`](docs/architecture.md) |
-| All keys and secrets, step by step | [`docs/api-keys-setup.md`](docs/api-keys-setup.md) |
-| TinyFish key | [`docs/keys-tinyfish.md`](docs/keys-tinyfish.md) |
-| Local chain setup | [`docs/keys-local.md`](docs/keys-local.md) |
-| Sepolia wallets, RPC, faucet, deploy | [`docs/keys-sepolia.md`](docs/keys-sepolia.md) |
-| Hosting and secret handling | [`docs/deployment.md`](docs/deployment.md) |
-| **Quick demo with simulated payment (no wallet, no gas)** | [`docs/demo-payment-mode.md`](docs/demo-payment-mode.md) |
-| The 7-step demo | [`docs/demo-script.md`](docs/demo-script.md) |
-| Final delivery checklist | [`docs/submission-checklist.md`](docs/submission-checklist.md) |
-| API shapes | [`docs/api-contract.md`](docs/api-contract.md) |
-| Rules, formats, decisions | [`docs/decisions.md`](docs/decisions.md), [`docs/checks.md`](docs/checks.md) |
-| What is not real | [`docs/limitations.md`](docs/limitations.md) |
-| Proof records | [`docs/tinyfish-smoke.md`](docs/tinyfish-smoke.md), [`docs/deployments.md`](docs/deployments.md) |
-
-## Quick start
+## Quick Start
 
 ```bash
 cp .env.example .env
@@ -70,7 +42,7 @@ backend/.venv/bin/pip install -r backend/requirements-dev.txt
 docker compose up -d postgis
 ```
 
-Then run the three services from the repo root:
+Run the three services from the repository root:
 
 ```bash
 backend/.venv/bin/uvicorn app.api.main:app --app-dir backend --reload --port 8000
@@ -78,23 +50,31 @@ npm run dev:middleware
 npm run dev:frontend
 ```
 
-For the chain and keys, follow [`docs/api-keys-setup.md`](docs/api-keys-setup.md).
+Verify environment files with `npm run check:env` (add `-- sepolia` for the testnet). Keys and wallets: [`docs/api-keys-setup.md`](docs/api-keys-setup.md). Full setup: [`SETUP.md`](SETUP.md).
 
-## Start here by role
+## Demo
 
-| You are | Read |
+- Seven-step demo: [`docs/demo-script.md`](docs/demo-script.md)
+- Fast path with simulated payment (no wallet or gas): [`docs/demo-payment-mode.md`](docs/demo-payment-mode.md)
+
+## Documentation Index
+
+| Topic | File |
 |---|---|
-| Backend dev | `backend/AGENTS.md`, `backend/SETUP.md`, `docs/task-ownership.md` |
-| Middleware dev | `middleware/AGENTS.md`, `middleware/SETUP.md`, `docs/task-ownership.md` |
-| Frontend dev | `frontend/AGENTS.md`, `frontend/SETUP.md`, `docs/task-ownership.md` |
-| Lead | `docs/team-workflow.md`, `docs/status.md`, `whole_plan.md` |
+| Architecture | [`docs/architecture.md`](docs/architecture.md) |
+| API contract | [`docs/api-contract.md`](docs/api-contract.md) |
+| Rules and decisions | [`docs/decisions.md`](docs/decisions.md), [`docs/checks.md`](docs/checks.md) |
+| Keys and secrets | [`docs/api-keys-setup.md`](docs/api-keys-setup.md) |
+| Deployment | [`docs/deployment.md`](docs/deployment.md) |
+| Limitations | [`docs/limitations.md`](docs/limitations.md) |
+| Submission checklist | [`docs/submission-checklist.md`](docs/submission-checklist.md) |
 
-## Logs
+## Development Conventions
 
-Each module keeps its own Hinglish gitlog:
+Each module keeps a work log (`frontend/log-f.md`, `backend/log-b.md`, `middleware/log-m.md`) and an `AGENTS.md` guide. Generated copies of `whole_plan.md` and the shared `docs/` files inside each module are read-only; refresh them with `npm run sync:docs` and verify with `npm run check:docs`. The progress header in `whole_plan.md` is outdated; `docs/status.md` is authoritative.
 
-- [`frontend/log-f.md`](frontend/log-f.md)
-- [`backend/log-b.md`](backend/log-b.md)
-- [`middleware/log-m.md`](middleware/log-m.md)
+## Team and Contribution
 
-Format: `[.]` = completed, `[]` = pending, with date, time, and session.
+Team Bace Hackers: Pratham Bansal and Yash Baghel.
+
+[Add: your specific contribution, e.g. which modules you built.]
